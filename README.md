@@ -7,7 +7,8 @@ A high level system architecture diagram is as follows:
 
 ## Design decisions
 The back-end service will be Python based. We decided to go with a microframework instead of macro, full stack frameworks like Django, because of its simplicity and ease to add/ switch components. We chose Bottle over Flask due to its single file approach and zero dependencies. If things get messy as we move forward, we will switch to favourable frameworks. HTTP requests method will be used as the data exchange mechanism. Long term, it will ideally be through web sockets which would mandate use of frameworks like Tornado or Twisted for asynchronous methods. <br />
-We chose MongoDB, a popular NoSQL option over SQL because of its flexibility and scalability. 
+We chose MongoDB, a popular NoSQL option over SQL because of its flexibility and scalability. <br />
+Back-end information will be exposed using a simple RESTful API though Bottle.
 
 ## Development
 Test changes on a local machine (localhost).
