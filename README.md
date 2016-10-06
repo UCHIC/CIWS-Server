@@ -1,6 +1,6 @@
-Cyberinfrastructure for Intelligent Water Supply (ciws) is an end to end system for residential water consumption data collection, processing and analysis. It primarily has three components, namely ciws-node (data collection), ciws-server (back-end) and ciws-client (website/ mobile app).
+Cyberinfrastructure for Intelligent Water Supply (ciws) is an end to end system for residential water consumption data collection, processing and analysis. It primarily has three components, namely ciws-node (data collection with raspberry pi), ciws-server (back-end) and ciws-client (website/ mobile app).
 
-# ciws-server
+# ciws-campus-server
 The back-end server, web service and analysis code reside in this repository. <br />
 A high level system architecture diagram is as follows: 
 ![alt tag](https://github.com/UCHIC/ciws-server/blob/master/figs/CIWS_server_fig.png)
