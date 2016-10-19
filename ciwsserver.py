@@ -1,40 +1,44 @@
-from bottle import request, post, get, run 
+from flask import Flask, request
 import json
+import requests
+
+app = Flask(__name__)
 
 #import serverconfig file
 serverconfig = json.load(open('serverconfig.json'))
 server_ip = serverconfig["server_ip"]
 server_port = serverconfig["server_port"]
 
-
 #module to save building json data to db
 import dbhandler
 
-@post('/rpiminute')
+
+@app.route('/rpiminute', methods = ['POST'])
 def rpiminute():
-	#endoint to receive rpi json and write to local db
-	buildingid = request.json['buildingid']
-	water_usage_inst = request.json['water_usage_inst']
-	waterusagedb(buildingid, water_usage_inst)
+	#endpoinat to receive water usage json data and write to local db
 	return "Data received!"
 
-@get('/daily')
+@app.route('/daily', methods = ['GET'])
 def getdaily():
 	#endoint to send daily water usage stats as json
-	#parse input for building id
-	#function(buildingid,dailytag) 
 	return "Daily data!"
 
-@get('/weekly')
+@app.route('/weekly', methods = ['GET'])
 def getweekly():
 	#endpoint to send weekly water usage stats as json
 	return "Weekly data!"
 
-@get('/monthly')
+@app.route('/monthly', methods = ['GET'])
 def getmonthly():
 	#endpoint to send monthly water usage stats as json
 	return "Monthly data!"
 
+@app.route('/')
+def hello():
+    return 'Hello World'
 
-run(host=server_ip, port=server_port, debug=True) 
+
+if __name__ == '__main__':
+    #run(host=server_ip, port=server_port, debug=True) 
+    app.run(host = server_ip, port = server_port)
 
