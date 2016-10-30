@@ -21,8 +21,8 @@ CREATE TABLE IF NOT EXISTS `mydb`.`sites` (
   `site_id` INT NOT NULL,
   `site_code` VARCHAR(45) NULL,
   `site_name` VARCHAR(45) NULL,
-  `site_lat` VARCHAR(45) NULL,
-  `site_long` VARCHAR(45) NULL,
+  `site_lat` FLOAT NULL,
+  `site_long` FLOAT NULL,
   `site_type` VARCHAR(45) NULL,
   `site_comments` VARCHAR(45) NULL,
   `site_state` VARCHAR(45) NULL,
@@ -48,7 +48,7 @@ ENGINE = InnoDB;
 CREATE TABLE IF NOT EXISTS `mydb`.`timeseries` (
   `timeseries_id` INT NOT NULL,
   `timeseries_utc_offset` FLOAT NULL,
-  `timeseries_begin_datatime_utc` DATETIME NULL,
+  `timeseries_begin_datetime_utc` DATETIME NULL,
   `timeseries_end_datetime_utc` DATETIME NULL,
   `variable_variable_id` INT NOT NULL,
   `sites_site_id` INT NOT NULL,
@@ -93,3 +93,10 @@ SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
+-- Insert data into sites
+INSERT INTO `sites` (`site_id`,`site_code`,`site_name`,`site_lat`, `site_long`, `site_type`, `site_comments`, `site_state`) 
+VALUES (1, 'LLC_A', 'Living and Learning Center', 35, 111, 'hot', 'None', 'Utah');
+
+-- Insert data into variable
+INSERT INTO `variable` (`variable_id`, `variable_code`, `variable_name`, `variable_unit`)
+VALUES (1, 'inst_water_vol', 'water usage', 'gal/min');
