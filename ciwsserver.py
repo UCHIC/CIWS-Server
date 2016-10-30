@@ -14,8 +14,8 @@ def rpiminute():
     #endoint to receive rpi json and write to local db
     try:
         buildingid = request.json['buildingid']
-	water_usage_inst = request.json['water_usage_inst']
-        dbhandler.waterusagedb(buildingid, water_usage_inst)
+        water_usage_inst = request.json['water_usage_inst']
+        #dbhandler.waterusagedb(buildingid, water_usage_inst)
 	print buildingid, water_usage_inst
         return "Water usage data received!"
     except: 
