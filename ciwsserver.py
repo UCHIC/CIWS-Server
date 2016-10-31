@@ -17,17 +17,24 @@ def rpiminute():
         timeseries_utc_offset = request.json['timeseries_utc_offset']
         timeseries_begin_datetime_utc = request.json['timeseries_begin_datetime_utc']
         timeseries_end_datetime_utc = request.json['timeseries_end_datetime_utc']
+        timeseries_datavalues = request.json['timeseries_datavalues']
         variable_id = request.json['variable_id']
         site_id = request.json['site_id']
 
-        dbhandler.waterusagedb(timeseries_id, timeseries_utc_offset, timeseries_begin_datetime_utc, timeseries_end_datetime_utc, variable_id, site_id)
-	print timeseries_id, timeseries_utc_offset, timeseries_begin_datetime_utc, \
-              timeseries_end_datetime_utc, variable_id, site_id
+        dbhandler.writewaterusagedb(timeseries_id, timeseries_utc_offset, timeseries_begin_datetime_utc, timeseries_end_datetime_utc, timeseries_datavalues, variable_id, site_id)
+        print request.json
         return "Water usage data received!"
     
     except Exception as e: 
         print e, type(e), e.args
         return "No data received!"
+
+@get('/all')
+def getall():
+    #endpoint to fetch all data
+    alldata = dbhandler.readwaterusagedb()
+    print alldata
+    return alldata
 
 @get('/daily')
 def getdaily():

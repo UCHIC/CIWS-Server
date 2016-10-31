@@ -1,11 +1,12 @@
 #Import necessary modules
 import pymysql.cursors
 import json
+from bson import json_util
 
 serverconfig = json.load(open('serverconfig.json'))
 
 #Write water usage data to timeseries table in db
-def waterusagedb(timeseries_id, timeseries_utc_offset, timeseries_begin_datetime_utc, timeseries_end_datetime_utc, variable_id, site_id):
+def writewaterusagedb(timeseries_id, timeseries_utc_offset, timeseries_begin_datetime_utc, timeseries_end_datetime_utc, timeseries_datavalues, variable_id, site_id):
     #Open connection to db
     connection = pymysql.connect(host=serverconfig["server_db_host"],
                              user=serverconfig["server_db_user"],
@@ -28,7 +29,7 @@ def waterusagedb(timeseries_id, timeseries_utc_offset, timeseries_begin_datetime
     finally:
         connection.close()       
 
-#Read water usage data 
+#Read all water usage timeseries data 
 def readwaterusagedb():        
     #Open connection to db
     connection = pymysql.connect(host=serverconfig["server_db_host"],
@@ -39,12 +40,12 @@ def readwaterusagedb():
                              cursorclass=pymysql.cursors.DictCursor)
     try:
         with connection.cursor() as cursor:
-            # Read a recod. TODO write sql query
-            #sql = "SELECT `id`, `password` FROM `timeseries` WHERE `email`=%s"
-            #cursor.execute(sql, ('webmaster@python.org',))
-            #result = cursor.fetchone()
-            #print(result)
-            print "TODO, not yet implemented"
+            sql = "SELECT * FROM `timeseries`"
+            cursor.execute(sql)
+            result = cursor.fetchall()
 
     finally:
         connection.close()
+    
+    result = json.dumps(result, default = json_util.default)
+    return result
