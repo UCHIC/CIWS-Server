@@ -1,5 +1,7 @@
 from bottle import request, post, get, run 
 import json
+from gevent import monkey;
+monkey.patch_all()
 
 #import serverconfig file and its parameters
 serverconfig = json.load(open('serverconfig.json'))
@@ -52,4 +54,4 @@ def getmonthly():
     return "Monthly data!"
 
 if __name__ == '__main__':
-    run(host=server_ip, port=server_port, debug=True)
+    run(host=server_ip, port=server_port, server = 'gevent', debug=True)
