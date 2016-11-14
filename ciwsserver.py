@@ -17,13 +17,14 @@ def rpiminute():
     try:
         timeseries_id = request.json['timeseries_id']
         timeseries_utc_offset = request.json['timeseries_utc_offset']
-        timeseries_begin_datetime_utc = request.json['timeseries_begin_datetime_utc']
-        timeseries_end_datetime_utc = request.json['timeseries_end_datetime_utc']
-        timeseries_datavalues = request.json['timeseries_datavalues']
-        variable_id = request.json['variable_id']
-        site_id = request.json['site_id']
+        timeseries_begin_timestamp_utc = request.json['timeseries_begin_timestamp_utc']
+        timeseries_end_timestamp_utc = request.json['timeseries_end_timestamp_utc']
+        timeseries_datavalue = request.json['timeseries_datavalue']
+        timeseries_variable_id = request.json['timeseries_variable_id']
+        timeseries_site_id = request.json['timeseries_site_id']
+        timeseries_dst = request.json['timeseries_dst']
 
-        dbhandler.writewaterusagedb(timeseries_id, timeseries_utc_offset, timeseries_begin_datetime_utc, timeseries_end_datetime_utc, timeseries_datavalues, variable_id, site_id)
+        dbhandler.writewaterusagedb(timeseries_id, timeseries_utc_offset, timeseries_begin_timestamp_utc, timeseries_end_timestamp_utc, timeseries_datavalue, timeseries_variable_id, timeseries_site_id, timeseries_dst)
         print request.json
         return "Water usage data received!"
     
