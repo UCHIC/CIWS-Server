@@ -48,7 +48,7 @@ def readwaterusagedb():
                              cursorclass=pymysql.cursors.DictCursor)
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM `datavalues`"
+            sql = "SELECT * FROM `datavalue`"
             cursor.execute(sql)
             result = cursor.fetchall()
 

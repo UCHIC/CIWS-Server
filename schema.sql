@@ -76,7 +76,7 @@ COLLATE = utf8_unicode_ci;
 -- Table `waterusedb`.`datavalue`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `waterusedb`.`datavalue` (
-  `datavalue_id` INT(11) NOT NULL,
+  `datavalue_id` INT(11) NOT NULL AUTO_INCREMENT,
   `datavalue_value` FLOAT NOT NULL,
   `datavalue_datetime_utc` DATETIME NOT NULL,
   `timeseries_timeseries_id` INT(11) NOT NULL,
