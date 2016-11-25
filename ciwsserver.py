@@ -15,18 +15,9 @@ import dbhandler
 def rpiminute():
     #endoint to receive rpi json and write to local db
     try:
-        #timeseries_utc_offset = request.json['timeseries_utc_offset']
-        #timeseries_begin_timestamp_utc = request.json['timeseries_begin_timestamp_utc']
-        #timeseries_end_timestamp_utc = request.json['timeseries_end_timestamp_utc']
-        #timeseries_datavalue = request.json['timeseries_datavalue']
-        #timeseries_variable_id = request.json['timeseries_variable_id']
-        #timeseries_site_id = request.json['timeseries_site_id']
-        #timeseries_dst = request.json['timeseries_dst']
+        timeseries_id = request.json['timeseries_id']
         datavalues = request.json['datavalues']
-        print datavalues
-        dbhandler.writewaterusedb(datavalues)
-        #dbhandler.writewaterusagedb(timeseries_id, timeseries_utc_offset, timeseries_begin_timestamp_utc, timeseries_end_timestamp_utc, timeseries_datavalue, timeseries_variable_id, timeseries_site_id, timeseries_dst)
-        print request.json
+        dbhandler.writewaterusedb(datavalues, timeseries_id)
         return "Water usage data received!"
     
     except Exception as e: 

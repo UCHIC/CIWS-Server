@@ -6,7 +6,7 @@ from bson import json_util
 serverconfig = json.load(open('serverconfig.json'))
 
 #Write water usage data to timeseries table in db
-def writewaterusedb(datavalues):
+def writewaterusedb(datavalues, timeseries_id):
     #Open connection to db
     connection = pymysql.connect(host=serverconfig["server_db_host"],
                              user=serverconfig["server_db_user"],
@@ -16,11 +16,7 @@ def writewaterusedb(datavalues):
                              cursorclass=pymysql.cursors.DictCursor)
     try:
         with connection.cursor() as cursor:
-            # Create a new timeseries record
-            #sql = "INSERT INTO `timeseries` (`timeseries_id`, `timeseries_utc_offset`," + \
-            #      "`timeseries_begin_timestamp_utc`, `timeseries_end_timestamp_utc`, `timeseries_dst`, `variable_variable_id`," + \
-            #      " `sites_site_id`) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-            #cursor.execute(sql, (timeseries_id, timeseries_utc_offset, timeseries_begin_timestamp_utc, timeseries_end_timestamp_utc, timeseries_dst, timeseries_variable_id, timeseries_site_id))
+            # TODO: Update timeseries record with begin end time
             
             # Create new datavalue records 
             datavalue_value = []
@@ -31,8 +27,8 @@ def writewaterusedb(datavalues):
             print datavalue_value, datavalue_datetime_utc 
  
             #Assuming only 2 datavalues per object
-            sql = "INSERT INTO `datavalue` (`datavalue_value`, `datavalue_datetime_utc`) VALUES (%s, %s), (%s, %s)"
-            cursor.execute(sql, (datavalue_value[0], datavalue_datetime_utc[0], datavalue_value[1], datavalue_datetime_utc[1]))
+            sql = "INSERT INTO `datavalue` (`datavalue_value`, `datavalue_datetime_utc`, `timeseries_timeseries_id`) VALUES (%s, %s, %s), (%s, %s, %s)"
+            cursor.execute(sql, (datavalue_value[0], datavalue_datetime_utc[0], timeseries_id, datavalue_value[1], datavalue_datetime_utc[1], timeseries_id))
 
             # connection is not autocommit by default. So you must commit to save
             # your changes.
@@ -52,7 +48,7 @@ def readwaterusagedb():
                              cursorclass=pymysql.cursors.DictCursor)
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM `timeseries`"
+            sql = "SELECT * FROM `datavalues`"
             cursor.execute(sql)
             result = cursor.fetchall()
 
