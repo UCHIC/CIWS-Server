@@ -5,6 +5,13 @@ SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
 
 -- -----------------------------------------------------
+-- Schema mydb
+-- -----------------------------------------------------
+-- -----------------------------------------------------
+-- Schema waterusedb
+-- -----------------------------------------------------
+
+-- -----------------------------------------------------
 -- Schema waterusedb
 -- -----------------------------------------------------
 CREATE SCHEMA IF NOT EXISTS `waterusedb` DEFAULT CHARACTER SET utf8 ;
@@ -21,7 +28,7 @@ CREATE TABLE IF NOT EXISTS `waterusedb`.`sites` (
   `site_long` FLOAT NULL DEFAULT NULL,
   `site_type` VARCHAR(45) CHARACTER SET 'utf8' NULL DEFAULT NULL,
   `site_comments` VARCHAR(45) CHARACTER SET 'utf8' NULL DEFAULT NULL,
-  `site_dst` INT NULL,
+  `site_dst` INT(11) NULL DEFAULT NULL,
   PRIMARY KEY (`site_id`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8
@@ -36,7 +43,7 @@ CREATE TABLE IF NOT EXISTS `waterusedb`.`variable` (
   `variable_code` VARCHAR(45) CHARACTER SET 'utf8' NULL DEFAULT NULL,
   `variable_name` VARCHAR(45) CHARACTER SET 'utf8' NULL DEFAULT NULL,
   `variable_unit` VARCHAR(45) CHARACTER SET 'utf8' NULL DEFAULT NULL,
-  `variable_method` VARCHAR(45) NULL,
+  `variable_method` VARCHAR(45) CHARACTER SET 'utf8' NULL DEFAULT NULL,
   PRIMARY KEY (`variable_id`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8
@@ -48,11 +55,13 @@ COLLATE = utf8_unicode_ci;
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `waterusedb`.`timeseries` (
   `timeseries_id` INT(11) NOT NULL AUTO_INCREMENT,
-  `timeseries_utc_offset` FLOAT NULL DEFAULT NULL,
+  `timeseries_utc_offset` FLOAT NOT NULL,
   `timeseries_begin_datetime_utc` DATETIME NOT NULL,
   `timeseries_end_datetime_utc` DATETIME NOT NULL,
   `variable_variable_id` INT(11) NOT NULL,
   `sites_site_id` INT(11) NOT NULL,
+  `timeseries_begin_datetime_local` DATETIME NOT NULL,
+  `timeseries_end_datetime_local` DATETIME NOT NULL,
   PRIMARY KEY (`timeseries_id`),
   UNIQUE INDEX `timeseries_id_UNIQUE` (`timeseries_id` ASC),
   INDEX `fk_timeseries_variable1_idx` (`variable_variable_id` ASC),
@@ -80,6 +89,7 @@ CREATE TABLE IF NOT EXISTS `waterusedb`.`datavalue` (
   `datavalue_value` FLOAT NOT NULL,
   `datavalue_datetime_utc` DATETIME NOT NULL,
   `timeseries_timeseries_id` INT(11) NOT NULL,
+  `datavalue_datetime_local` DATETIME NOT NULL,
   PRIMARY KEY (`datavalue_id`),
   UNIQUE INDEX `iddatavalue_id_UNIQUE` (`datavalue_id` ASC),
   INDEX `fk_datavalue_timeseries1_idx` (`timeseries_timeseries_id` ASC),
