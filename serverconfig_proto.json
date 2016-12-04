@@ -1,0 +1,9 @@
+{
+	"server_ip": "your server ip",
+	"server_port": "your server port",
+        "server_db_pwd": "your sql db pwd",
+        "server_db_name": "your sql db name",
+        "server_db_user": "your sql db user",
+        "server_db_charset": "utf8",
+        "server_db_host": "localhost"
+}
