@@ -1,20 +1,31 @@
-Cyberinfrastructure for Intelligent Water Supply (ciws) is an end to end system for residential water consumption data collection, processing and analysis. It primarily has three components, namely ciws-node (data collection with raspberry pi), ciws-server (back-end) and ciws-client (website/ mobile app).
+Cyberinfrastructure for Intelligent Water Supply (CIWS) is an end to end system for residential water consumption data collection, processing and analysis. It primarily has three components, namely ciws-node (data collection with raspberry pi), ciws-server (back-end) and ciws-client (website/ mobile app).
 
-# ciws-campus-server
-This repository will hold server code and files related to a ciws implementation in USU's Living and Learning Centre housing facility. <br />
+# CIWS-server
+This repository will hold server code and files related to a CIWS implementation in USU's students residential buildings. These buildings are fitted with a water meter that has an external 4-20mA output whose voltage varies depending on instantaneous water use. <br />
 A high level system architecture diagram is as follows: 
 ![alt tag](https://github.com/UCHIC/ciws-server/blob/master/figs/CIWS_server_fig.png)
 
 ## Design decisions
-The back-end service will be Python based. We decided to go with a microframework instead of macro, full stack frameworks like Django, because of its simplicity and ease to add/ switch components. We chose Bottle over Flask due to its single file approach and zero dependencies. Currenly, the web app is served through the defualt Bottle server which is not production ready. We will change it to servers like Tornado or Twisted that can support async methods and web sockets. <br />
-MySQL db, a popular relational database management system, will manage and store data. A Python MySQL client library such as PyMySQl will be used to create, write and read data to the database. <br />
-Back-end information will be exposed using a simple RESTful API though Bottle.
+The back-end service will be Python based. We decided to go with a microframework instead of macro, full stack frameworks like Django, because of its simplicity and ease to add/ switch components. We chose Bottle over Flask due to its single file approach and zero dependencies. This can be replaced if necessary in the future. The Bottle app is served through Gevent, an aysnchronous server which can handle multiple connections. Back-end information will be exposed using a simple RESTful API though Bottle. <br />
+MySQL db, a popular relational database management system, is used to manage and store data. The database schema is as follows:
+![alt tag] (https://github.com/UCHIC/ciws-server/blob/master/figs/ciws_campus_db_ER.png)
+
+## Implementation
+A Python MySQL client library, PyMySQl was used to create, write and read data to the database. This codebase can be cloned to your local machine or a cloud server instance such as AWS EC2, within a Linux environment. <br />
+The server is currently expecting water use pushes every minute in a JSON format. This JSON would contain timeseries_id and two datavalues and local date time objects. Each of these datavalue is an average of instantaneous water use measured over 30s. <br />
+
+### File overview
+serverconfig.json: JSON file with server and database parameters <br />
+schema.sql: SQL script to create a database <br />
+loaddata.sql: SQL script to pre load sites, variables and timeseries attributes <br />
+ciwsserver.py: Python script with API endpoints definition <br />
+dbhandler.py: Python script to write and read database <br />
 
 ## Development
 Test changes on a local machine (localhost).
 
 ## Deployment
-Pull this repository code to your server and change serverconfig.json details.
+Pull this repository code to your server. Create a copy of serverconfig_proto.json and rename to serverconfig.json with your instance details. Start the server by running ciwsserver.py
 
 ## Contribution
 Fork and branch gitflow.
