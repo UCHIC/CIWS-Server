@@ -17,6 +17,7 @@ def rpiminute():
     try:
         timeseries_id = request.json['timeseries_id']
         datavalues = request.json['datavalues']
+        print timeseries_id, datavalues
         dbhandler.writewaterusedb(datavalues, timeseries_id)
         return "Water usage data received!"
     
@@ -24,27 +25,34 @@ def rpiminute():
         print e, type(e), e.args
         return "No data received!"
 
-@get('/all')
-def getall():
-    #endpoint to fetch all data
-    alldata = dbhandler.readwaterusagedb()
-    print alldata
-    return alldata
+@get('/datavalues/<timeseries_id:int>')
+def getdatavalues(timeseries_id):
+    #endpoint to send datavalues for a particular timeseries
+    datavalues = dbhandler.readwaterusedatavalues(timeseries_id)
+    print datavalues
+    return datavalues
 
-@get('/daily')
-def getdaily():
-    #endoint to send daily water usage stats as json 
-    return "Daily data!"
+@get('/sites')
+def getsites():
+    #endoint to send all sites attributes as json 
+    sites = dbhandler.readsites()
+    print sites
+    return sites
 
-@get('/weekly')
-def getweekly():
-    #endpoint to send weekly water usage stats as json
-    return "Weekly data!"
+@get('/timeseries')
+def gettimeseries():
+    #endpoint to send all timeseries attributes as json
+    timeseries = dbhandler.readtimeseries()
+    print timeseries
+    return timeseries
 
-@get('/monthly')
-def getmonthly():
-    #endpoint to send monthly water usage stats as json
-    return "Monthly data!"
+@get('/variable')
+def getvariable():
+    #endpoint to send all variable attributes as json
+    variable = dbhandler.readvariable()
+    print variable
+    return variable
+
 
 if __name__ == '__main__':
     run(host=server_ip, port=server_port, server = 'gevent', debug=True)

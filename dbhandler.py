@@ -37,8 +37,8 @@ def writewaterusedb(datavalues, timeseries_id):
     finally:
         connection.close()       
 
-#Read all water usage timeseries data 
-def readwaterusagedb():        
+#Read water use datavalues for a particular timeserie 
+def readwaterusedatavalues(timeseries_id):        
     #Open connection to db
     connection = pymysql.connect(host=serverconfig["server_db_host"],
                              user=serverconfig["server_db_user"],
@@ -48,12 +48,75 @@ def readwaterusagedb():
                              cursorclass=pymysql.cursors.DictCursor)
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM `datavalue`"
-            cursor.execute(sql)
+            sql = "SELECT * FROM `datavalue` WHERE `timeseries_timeseries_id` = %s"
+            cursor.execute(sql, (timeseries_id))
             result = cursor.fetchall()
 
     finally:
         connection.close()
     
+    result = json.dumps(result, default = json_util.default)
+    return result
+
+#Read sites
+def readsites():
+    #Open connection to db
+    connection = pymysql.connect(host=serverconfig["server_db_host"],
+                             user=serverconfig["server_db_user"],
+                             password=serverconfig["server_db_pwd"],
+                             db=serverconfig["server_db_name"],
+                             charset=serverconfig["server_db_charset"],
+                             cursorclass=pymysql.cursors.DictCursor)
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM `sites`"
+            cursor.execute(sql)
+            result = cursor.fetchall()
+
+    finally:
+        connection.close()
+
+    result = json.dumps(result, default = json_util.default)
+    return result
+
+#Read timeseries
+def readtimeseries():
+    #Open connection to db
+    connection = pymysql.connect(host=serverconfig["server_db_host"],
+                             user=serverconfig["server_db_user"],
+                             password=serverconfig["server_db_pwd"],
+                             db=serverconfig["server_db_name"],
+                             charset=serverconfig["server_db_charset"],
+                             cursorclass=pymysql.cursors.DictCursor)
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM `timeseries`"
+            cursor.execute(sql)
+            result = cursor.fetchall()
+
+    finally:
+        connection.close()
+
+    result = json.dumps(result, default = json_util.default)
+    return result
+
+#Read variable
+def readvariable():
+    #Open connection to db
+    connection = pymysql.connect(host=serverconfig["server_db_host"],
+                             user=serverconfig["server_db_user"],
+                             password=serverconfig["server_db_pwd"],
+                             db=serverconfig["server_db_name"],
+                             charset=serverconfig["server_db_charset"],
+                             cursorclass=pymysql.cursors.DictCursor)
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM `variable`"
+            cursor.execute(sql)
+            result = cursor.fetchall()
+
+    finally:
+        connection.close()
+
     result = json.dumps(result, default = json_util.default)
     return result
