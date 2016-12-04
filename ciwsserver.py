@@ -1,10 +1,9 @@
-from flask import Flask, request
+from bottle import request, post, get, run 
 import json
-import requests
+from gevent import monkey;
+monkey.patch_all()
 
-app = Flask(__name__)
-
-#import serverconfig file
+#import serverconfig file and its parameters
 serverconfig = json.load(open('serverconfig.json'))
 server_ip = serverconfig["server_ip"]
 server_port = serverconfig["server_port"]
@@ -12,33 +11,48 @@ server_port = serverconfig["server_port"]
 #module to save building json data to db
 import dbhandler
 
-
-@app.route('/rpiminute', methods = ['POST'])
+@post('/rpiminute')
 def rpiminute():
-	#endpoinat to receive water usage json data and write to local db
-	return "Data received!"
+    #endoint to receive rpi json and write to local db
+    try:
+        timeseries_id = request.json['timeseries_id']
+        datavalues = request.json['datavalues']
+        print timeseries_id, datavalues
+        dbhandler.writewaterusedb(datavalues, timeseries_id)
+        return "Water usage data received!"
+    
+    except Exception as e: 
+        print e, type(e), e.args
+        return "No data received!"
 
-@app.route('/daily', methods = ['GET'])
-def getdaily():
-	#endoint to send daily water usage stats as json
-	return "Daily data!"
+@get('/datavalues/<timeseries_id:int>')
+def getdatavalues(timeseries_id):
+    #endpoint to send datavalues for a particular timeseries
+    datavalues = dbhandler.readwaterusedatavalues(timeseries_id)
+    print datavalues
+    return datavalues
 
-@app.route('/weekly', methods = ['GET'])
-def getweekly():
-	#endpoint to send weekly water usage stats as json
-	return "Weekly data!"
+@get('/sites')
+def getsites():
+    #endoint to send all sites attributes as json 
+    sites = dbhandler.readsites()
+    print sites
+    return sites
 
-@app.route('/monthly', methods = ['GET'])
-def getmonthly():
-	#endpoint to send monthly water usage stats as json
-	return "Monthly data!"
+@get('/timeseries')
+def gettimeseries():
+    #endpoint to send all timeseries attributes as json
+    timeseries = dbhandler.readtimeseries()
+    print timeseries
+    return timeseries
 
-@app.route('/')
-def hello():
-    return 'Hello World'
+@get('/variable')
+def getvariable():
+    #endpoint to send all variable attributes as json
+    variable = dbhandler.readvariable()
+    print variable
+    return variable
 
 
 if __name__ == '__main__':
-    #run(host=server_ip, port=server_port, debug=True) 
-    app.run(host = server_ip, port = server_port)
-
+    run(host=server_ip, port=server_port, server = 'gevent', debug=True)
