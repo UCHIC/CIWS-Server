@@ -1,13 +1,13 @@
 Cyberinfrastructure for Intelligent Water Supply (CIWS) is an end to end system for residential water consumption data collection, processing and analysis. It primarily has three components, namely ciws-node (data collection with raspberry pi), ciws-server (back-end) and ciws-client (website/ mobile app).
 
 # CIWS-server
-This repository will hold server code and files related to a CIWS implementation in USU's students residential buildings. These buildings are fitted with a water meter that has an external 4-20mA output whose voltage varies depending on instantaneous water use. <br />
+This repository holds server code and files related to a CIWS implementation in USU's students residential buildings. These buildings are fitted with a water meter that has an external 4-20mA output whose voltage varies depending on instantaneous water use. <br />
 A high level system architecture diagram is as follows: 
 ![alt tag](https://github.com/UCHIC/ciws-server/blob/master/figs/CIWS_server_fig.png)
 
 ## Design decisions
-The back-end service will be Python based. We decided to go with a microframework instead of macro, full stack frameworks like Django, because of its simplicity and ease to add/ switch components. We chose Bottle over Flask due to its single file approach and zero dependencies. This can be replaced if necessary in the future. The Bottle app is served through Gevent, an aysnchronous server which can handle multiple connections. Back-end information will be exposed using a simple RESTful API though Bottle. <br />
-MySQL db, a popular relational database management system, is used to manage and store data. The database schema is as follows:
+The back-end service is currently Python based. For now, we have decided to go with a microframework instead of macro, full stack frameworks like Django, because of its simplicity and ease to add/ switch components. We chose Bottle over Flask due to its single file approach and zero dependencies. This can be replaced if necessary in the future. The Bottle app is served through Gevent, an aysnchronous server which can handle multiple connections. Back-end information will be exposed using a simple RESTful API though Bottle. <br />
+MySQL db, a popular relational database management system, is currently used to manage and store data. The database schema is as follows:
 ![alt tag] (https://github.com/UCHIC/ciws-server/blob/master/figs/ciws_campus_db_ER.png)
 
 ## Implementation
@@ -29,4 +29,8 @@ Pull this repository code to your server. Create a copy of serverconfig_proto.js
 
 ## Contribution
 Fork and branch gitflow.
+
+## Credits
+
+This work was supported by National Science Foundation Grant [1552444](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1552444). Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
 
