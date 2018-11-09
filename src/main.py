@@ -5,12 +5,8 @@ from stat import S_ISDIR
 import time
 from timeit import default_timer as timer
 
-IS_PY2 = sys.version_info < (3, 0)
 
-if IS_PY2:
-    from Queue import Queue
-else:
-    from queue import Queue
+from queue import Queue
 
 from threading import Thread
 
@@ -62,26 +58,26 @@ if __name__ == "__main__":
     # Function to be executed in a thread
     def connect(host):
         source = '/home/pi/CampusMeter/'
-        building = host[host.find('llc-') + 4] + '/'
-        target = 'C:/Users/Elijah/Documents/' + building
+        building = host[host.find('llc-') + 4]
+        target = '/opt/ciws/data/' + building
 
         transport = paramiko.Transport(host, 22)
         transport.connect(username='pi', password='p1w4t3r')
         sftp = paramiko.SFTPClient.from_transport(transport)
 
         if not os.path.isdir(target):
-            os.mkdir('%s' % (target) )
+            sftp.makedirs('%s' % (target) )
 
         for item in sftp.listdir_attr(source):
             if not S_ISDIR(item.st_mode):
                 if os.path.isfile(os.path.join(target, item.filename)) and os.stat(os.path.join(target, item.filename)).st_size != item.st_size:
                     start = timer()
-                    sftp.get('%s%s' % (source, item.filename), '%s%s' % (target, item.filename))
+                    sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
                     end = timer()
                     print(item.filename + " updated successfully, time elapsed: ", (end - start))
                 elif not os.path.isfile(os.path.join(target, item.filename)):
                     start = timer()
-                    sftp.get('%s%s' % (source, item.filename), '%s%s' % (target, item.filename))
+                    sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
                     end = timer()
                     print(item.filename + " copied successfully, time elapsed: ", (end - start))
             else:
