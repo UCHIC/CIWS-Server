@@ -1,9 +1,12 @@
-import sys
+import json
 import paramiko
 import os
-from stat import S_ISDIR
-import time
+from stat import *
+import pandas as pd
+import numpy as np
+from influxdb import DataFrameClient
 from timeit import default_timer as timer
+from datetime import datetime, timedelta
 
 
 from queue import Queue
@@ -54,53 +57,90 @@ class ThreadPool:
 
 if __name__ == "__main__":
 
+    def write_to_db(item, building, target):
+        if item.filename.endswith('.csv'):
+            # source = input("'hotIN', 'coldIN', or 'hotRETURN': ")
+            user = config["database"]["user"]
+            password = config["database"]["password"]
+            dbname = config["database"]["name"]
+            protocol = 'json'
+            port = config["database"]["port"]
+            host = config["database"]["host"]
+
+            client = DataFrameClient(host, port, user, password, dbname)
+
+            df = pd.read_csv(os.path.join(target, item.filename), skiprows=[0], index_col=0, sep=',', parse_dates=True,
+                             infer_datetime_format=True, usecols=['Date', 'coldInFlowRate', 'hotInFlowRate', 'hotOutFlowRate'])
+            df['buildingID'] = building.upper()
+            print("Writing to DataBase")
+            start = timer()
+            client.write_points(dataframe=df, measurement=config['database']['measurement'], field_columns={'coldInFlowRate': df[['coldInFlowRate']], 'hotInFlowRate': df[['hotInFlowRate']], 'hotOutFlowRate': df[['hotOutFlowRate']]}, tag_columns={'buildingID': building.upper()}, batch_size=10, protocol='line', numeric_precision=10)
+            end = timer()
+            print("Completed writing to database for: " + item.filename, "Time Elapsed: ", (end - start))
 
     # Function to be executed in a thread
     def connect(host):
+        print("Starting connection")
         source = '/home/pi/CampusMeter/'
         building = host[host.find('llc-') + 4]
-        target = '/opt/ciws/data/' + building
+        target = config["target"] + building
 
         transport = paramiko.Transport(host, 22)
-        transport.connect(username='pi', password='p1w4t3r')
+        transport.connect(username=config['sshinfo']['username'], password=config['sshinfo']['password'])
         sftp = paramiko.SFTPClient.from_transport(transport)
 
-        if not os.path.isdir(target):
-            sftp.makedirs('%s' % (target) )
+        if not os.path.isdir(target):wfds
+
+        channel = transport.open_channel(kind="session")
+        try:
+            print("Restarting Script")
+            current_time = datetime.now()
+            channel.exec_command('sudo python /home/pi/CampusMeter/multimeter_logger_test_2.py')
+        except(IOError):
+            print("Script Reboot Failed")
+            current_time = datetime.now()
+            pass
 
         for item in sftp.listdir_attr(source):
-            if not S_ISDIR(item.st_mode):
-                if os.path.isfile(os.path.join(target, item.filename)) and os.stat(os.path.join(target, item.filename)).st_size != item.st_size:
-                    start = timer()
-                    sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
-                    end = timer()
-                    print(item.filename + " updated successfully, time elapsed: ", (end - start))
-                elif not os.path.isfile(os.path.join(target, item.filename)):
-                    start = timer()
-                    sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
-                    end = timer()
-                    print(item.filename + " copied successfully, time elapsed: ", (end - start))
-            else:
-                os.mkdir('%s%s' % (target, item.filename), ignore_existing=True)
-                sftp.get_dir('%s%s' % (source, item.filename), '%s%s' % (target, item.filename))
+            if not datetime.fromtimestamp(sftp.stat(source + item.filename).st_mtime) > current_time:
+
+                if not S_ISDIR(item.st_mode):
+                    if os.path.isfile(os.path.join(target, item.filename)) and os.stat(os.path.join(target, item.filename)).st_size != item.st_size:
+                        start = timer()
+                        sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
+                        end = timer()
+                        print(item.filename + " updated successfully, time elapsed: ", (end - start))
+                        write_to_db(item, building, target)
+                    elif not os.path.isfile(os.path.join(target, item.filename)):
+                        start = timer()
+                        sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
+                        end = timer()
+                        print(item.filename + " copied successfully, time elapsed: ", (end - start))
+                        write_to_db(item, building, target)
+                else:
+                    os.mkdir('%s%s' % (target, item.filename), ignore_existing=True)
+                    sftp.get_dir('%s%s' % (source, item.filename), '%s%s' % (target, item.filename))
 
         # if we don't want the whole directory,  find latest file with ls -1t | head -1 instead
 
+
+
         sftp.close()
         transport.close()
-
+        print("Closing Connection")
 
 
     hosts = []
+    config = {}
     try:
-        with open("hosts", 'r') as ins:
-            for line in ins:
-                line = line.rstrip('\n')
-                hosts.append(line)
+        with open("settings.json", 'r') as data_file:
+            config = json.load(data_file)
     except OSError:
         print("No list of hostnames found.")
         exit(1)
 
+    for host in config['hosts']:
+        hosts.append(host['hostname'])
 
 
     # Instantiate a thread pool with 5 worker threads
@@ -112,3 +152,4 @@ if __name__ == "__main__":
     # the currently running batch of workers is finished.
     pool.map(connect, hosts)
     pool.wait_completion()
+    print("Complete")
