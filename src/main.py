@@ -96,7 +96,7 @@ if __name__ == "__main__":
         try:
             print("Restarting Script")
             current_time = datetime.now()
-            channel.exec_command('‘sudo killall python')
+            channel.exec_command('sudo killall python')
             channel.exec_command('sudo python /home/pi/CampusMeter/integrateable_multimeter_logger_with_temperature.py')
         except(IOError):
             print("Script Reboot Failed")
