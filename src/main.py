@@ -74,7 +74,7 @@ if __name__ == "__main__":
             df['buildingID'] = building.upper()
             print("Writing to DataBase")
             start = timer()
-            client.write_points(dataframe=df, measurement=config['database']['measurement'], field_columns={'coldInFlowRate': df[['coldInFlowRate']], 'hotInFlowRate': df[['hotInFlowRate']], 'hotOutFlowRate': df[['hotOutFlowRate']]}, tag_columns={'buildingID': building.upper()}, batch_size=10, protocol='line', numeric_precision=10)
+            client.write_points(dataframe=df, measurement=config['database']['measurement'], field_columns={'coldInFlowRate': df[['coldInFlowRate']], 'hotInFlowRate': df[['hotInFlowRate']], 'hotOutFlowRate': df[['hotOutFlowRate']]}, tag_columns={'buildingID': building.upper()}, protocol='line', numeric_precision=10, batch_size=2000)
             end = timer()
             print("Completed writing to database for: " + item.filename, "Time Elapsed: ", (end - start))
 
@@ -89,18 +89,19 @@ if __name__ == "__main__":
         transport.connect(username=config['sshinfo']['username'], password=config['sshinfo']['password'])
         sftp = paramiko.SFTPClient.from_transport(transport)
 
-        if not os.path.isdir(target):wfds
+        if not os.path.isdir(target):
+            os.makedirs('%s' % (target))
 
         channel = transport.open_channel(kind="session")
         try:
             print("Restarting Script")
             current_time = datetime.now()
-            channel.exec_command('sudo python /home/pi/CampusMeter/multimeter_logger_test_2.py')
+            channel.exec_command('‘sudo killall python')
+            channel.exec_command('sudo python /home/pi/CampusMeter/integrateable_multimeter_logger_with_temperature.py')
         except(IOError):
             print("Script Reboot Failed")
             current_time = datetime.now()
             pass
-
         for item in sftp.listdir_attr(source):
             if not datetime.fromtimestamp(sftp.stat(source + item.filename).st_mtime) > current_time:
 
@@ -151,5 +152,6 @@ if __name__ == "__main__":
     # makes it possible to cancel the thread pool with an exception when
     # the currently running batch of workers is finished.
     pool.map(connect, hosts)
+    print("Wait_completion")
     pool.wait_completion()
     print("Complete")
