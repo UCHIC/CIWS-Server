@@ -70,11 +70,19 @@ if __name__ == "__main__":
             client = DataFrameClient(host, port, user, password, dbname)
 
             df = pd.read_csv(os.path.join(target, item.filename), skiprows=[0], index_col=0, sep=',', parse_dates=True,
-                             infer_datetime_format=True, usecols=['Date', 'coldInFlowRate', 'hotInFlowRate', 'hotOutFlowRate'])
+                             infer_datetime_format=True, usecols=['Date', 'coldInFlowRate', 'hotInFlowRate', 'hotOutFlowRate', 'hotInTemp'
+                                                                  ,'hotOutTemp', 'coldInTemp'])
             df['buildingID'] = building.upper()
             print("Writing to DataBase")
             start = timer()
-            client.write_points(dataframe=df, measurement=config['database']['measurement'], field_columns={'coldInFlowRate': df[['coldInFlowRate']], 'hotInFlowRate': df[['hotInFlowRate']], 'hotOutFlowRate': df[['hotOutFlowRate']]}, tag_columns={'buildingID': building.upper()}, protocol='line', numeric_precision=10, batch_size=2000)
+            client.write_points(dataframe=df, measurement=config['database']['measurement'],
+                                field_columns={'coldInFlowRate': df[['coldInFlowRate']],
+                                                'hotInFlowRate': df[['hotInFlowRate']],
+                                                'hotOutFlowRate': df[['hotOutFlowRate']],
+                                                'hotInTemp': df[['hotInTemp']],
+                                                'hotOutTemp': df[['hotOutTemp']],
+                                                'coldInTemp': df[['coldInTemp']]},
+                                tag_columns={'buildingID': building.upper()}, protocol='line', numeric_precision=10, batch_size=2000)
             end = timer()
             print("Completed writing to database for: " + item.filename, "Time Elapsed: ", (end - start))
 
@@ -90,30 +98,33 @@ if __name__ == "__main__":
         sftp = paramiko.SFTPClient.from_transport(transport)
 
         if not os.path.isdir(target):
-            os.makedirs('%s' % (target))
+
+            sftp.makedirs('%s' % (target))
 
         channel = transport.open_channel(kind="session")
-        try:
-            print("Restarting Script")
-            current_time = datetime.now()
-            channel.exec_command('sudo killall python')
-            channel.exec_command('sudo python /home/pi/CampusMeter/integrateable_multimeter_logger_with_temperature.py')
-        except(IOError):
-            print("Script Reboot Failed")
-            current_time = datetime.now()
-            pass
-        for item in sftp.listdir_attr(source):
+        # try:  ## Moving this functionality to the datalogger script.
+        #     print("Restarting Script")
+        #     current_time = datetime.now()
+        #     # channel.exec_command('‘sudo killall python')
+        #     channel.exec_command('nohup python /home/pi/CampusMeter/integrateable_multimeter_logger_with_temperature.py')
+        # except(IOError):
+        #     print("Script Reboot Failed")
+        #     current_time = datetime.now()
+        #     pass
+        current_time = datetime.now()
+        for item in sftp.listdir_attr(source):  # Iterate on files on datalogger, check datetime values to exclude one being currently written.
             if not datetime.fromtimestamp(sftp.stat(source + item.filename).st_mtime) > current_time:
-
                 if not S_ISDIR(item.st_mode):
                     if os.path.isfile(os.path.join(target, item.filename)) and os.stat(os.path.join(target, item.filename)).st_size != item.st_size:
                         start = timer()
+                        print("Updating Data: ", item.filename)
                         sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
                         end = timer()
                         print(item.filename + " updated successfully, time elapsed: ", (end - start))
                         write_to_db(item, building, target)
                     elif not os.path.isfile(os.path.join(target, item.filename)):
                         start = timer()
+                        print("Copying Data: ", item.filename)
                         sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
                         end = timer()
                         print(item.filename + " copied successfully, time elapsed: ", (end - start))
