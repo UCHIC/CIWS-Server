@@ -69,13 +69,21 @@ if __name__ == "__main__":
 
             client = DataFrameClient(host, port, user, password, dbname)
 
-            df = pd.read_csv(os.path.join(target, item.filename), skiprows=[0], index_col=0, sep=',', parse_dates=True,
+            try:
+                df = pd.read_csv(os.path.join(target, item.filename), skiprows=[0], index_col=0, sep=',', parse_dates=True,
                              infer_datetime_format=True, usecols=['Date', 'coldInFlowRate', 'hotInFlowRate', 'hotOutFlowRate', 'hotInTemp'
                                                                   ,'hotOutTemp', 'coldInTemp'])
+            except IOError:
+                df = pd.read_csv(os.path.join(target, item.filename), skiprows=[0], index_col=0, sep=',',
+                                 parse_dates=True,
+                                 infer_datetime_format=True,
+                                 usecols=['Date', 'coldInFlowRate', 'hotInFlowRate', 'hotOutFlowRate',])
+
             df['buildingID'] = building.upper()
             print("Writing to DataBase")
             start = timer()
-            client.write_points(dataframe=df, measurement=config['database']['measurement'],
+            try:
+                client.write_points(dataframe=df, measurement=config['database']['measurement'],
                                 field_columns={'coldInFlowRate': df[['coldInFlowRate']],
                                                 'hotInFlowRate': df[['hotInFlowRate']],
                                                 'hotOutFlowRate': df[['hotOutFlowRate']],
@@ -83,6 +91,13 @@ if __name__ == "__main__":
                                                 'hotOutTemp': df[['hotOutTemp']],
                                                 'coldInTemp': df[['coldInTemp']]},
                                 tag_columns={'buildingID': building.upper()}, protocol='line', numeric_precision=10, batch_size=2000)
+            except IOError:
+                client.write_points(dataframe=df, measurement=config['database']['measurement'],
+                                    field_columns={'coldInFlowRate': df[['coldInFlowRate']],
+                                                   'hotInFlowRate': df[['hotInFlowRate']],
+                                                   'hotOutFlowRate': df[['hotOutFlowRate']]},
+                                    tag_columns={'buildingID': building.upper()}, protocol='line', numeric_precision=10,
+                                    batch_size=2000)
             end = timer()
             print("Completed writing to database for: " + item.filename, "Time Elapsed: ", (end - start))
 
@@ -98,8 +113,7 @@ if __name__ == "__main__":
         sftp = paramiko.SFTPClient.from_transport(transport)
 
         if not os.path.isdir(target):
-
-            sftp.makedirs('%s' % (target))
+            os.makedirs('%s' % (target))
 
         channel = transport.open_channel(kind="session")
         # try:  ## Moving this functionality to the datalogger script.
