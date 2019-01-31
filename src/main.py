@@ -82,7 +82,7 @@ if __name__ == "__main__":
             df['buildingID'] = building.upper()
             print("Writing to DataBase")
             start = timer()
-            try:
+            if 'hotOutTemp' in df.columns:
                 client.write_points(dataframe=df, measurement=config['database']['measurement'],
                                 field_columns={'coldInFlowRate': df[['coldInFlowRate']],
                                                 'hotInFlowRate': df[['hotInFlowRate']],
@@ -91,7 +91,7 @@ if __name__ == "__main__":
                                                 'hotOutTemp': df[['hotOutTemp']],
                                                 'coldInTemp': df[['coldInTemp']]},
                                 tag_columns={'buildingID': building.upper()}, protocol='line', numeric_precision=10, batch_size=2000)
-            except IOError:
+            else:
                 client.write_points(dataframe=df, measurement=config['database']['measurement'],
                                     field_columns={'coldInFlowRate': df[['coldInFlowRate']],
                                                    'hotInFlowRate': df[['hotInFlowRate']],
