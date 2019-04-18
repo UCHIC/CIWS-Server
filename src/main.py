@@ -3,11 +3,9 @@ import paramiko
 import os
 from stat import *
 import pandas as pd
-import numpy as np
 from influxdb import DataFrameClient
 from timeit import default_timer as timer
-from datetime import datetime, timedelta
-from slackclient import SlackClient as slack
+from datetime import datetime
 import requests
 
 

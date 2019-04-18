@@ -4,8 +4,8 @@ import json
 import pandas as pd
 
 
-def determine_interval(count):
-    result = counter
+def determine_interval(time):
+    result = (1/time)*60
     return result
 
 
@@ -29,6 +29,7 @@ if __name__ == "__main__":
         print("No list of hostnames found.")
         exit(1)
 
+    # TODO: URGENT Create new database and measurement to run this against.
     user = config["database"]["user"]
     password = config["database"]["password"]
     dbname = config["database"]["name"]
@@ -54,6 +55,7 @@ if __name__ == "__main__":
     for index, res in enumerate(results):
         if not res['hotOutFlowRate'] == 0:
             if len(update_range) is 0:
+                # TODO: URGENT! Make script inclusive of start of range index, but exclusive to end of index range
                 update_range.append(index + 1)
             else:
                 update_range.append(index - 1)
@@ -65,7 +67,7 @@ if __name__ == "__main__":
             if hotOutFlag == 2:
                 hotOutTime['endTime'] = res[1]
                 timeElapsed = time_elapsed(hotOutTime['startTime'], hotOutTime['endTime'])
-                value_to_write = determine_interval(counter, timeElapsed)
+                value_to_write = determine_interval(timeElapsed)
                 # Write Data here
                 write_data(value_to_write, df, update_range)
                 hotOutFlag = 0
