@@ -7,6 +7,8 @@ import numpy as np
 from influxdb import DataFrameClient
 from timeit import default_timer as timer
 from datetime import datetime, timedelta
+from slackclient import SlackClient as slack
+import requests
 
 
 from queue import Queue
@@ -56,10 +58,36 @@ class ThreadPool:
 
 
 if __name__ == "__main__":
+    hosts = []
+    config = {}
+    try:
+        with open("settings.json", 'r') as data_file:
+            config = json.load(data_file)
+    except OSError:
+        print("No list of hostnames found.")
+        exit(1)
+
+    for host in config['hosts']:
+        hosts.append(host['hostname'])
+
+    def send_error(data):
+        message = {
+            "TEXT": data
+        }
+        response = requests.post(
+            config['slack_webhook'],
+            data=json.dumps(message),
+            headers={'Content-Type': 'application/json'}
+        )
+        if response.status_code != 200:
+            raise ValueError(
+                'Request to slack returned an error %s, the response is:\n%s'
+                % (response.status_code, response.text)
+            )
 
     def write_to_db(item, building, target):
+
         if item.filename.endswith('.csv'):
-            # source = input("'hotIN', 'coldIN', or 'hotRETURN': ")
             user = config["database"]["user"]
             password = config["database"]["password"]
             dbname = config["database"]["name"]
@@ -69,16 +97,19 @@ if __name__ == "__main__":
 
             client = DataFrameClient(host, port, user, password, dbname)
 
-            try:
+            try: # Attempt to write using temp, if it fails, try to write using a different (in this case, old) structure of data.)
                 df = pd.read_csv(os.path.join(target, item.filename), skiprows=[0], index_col=0, sep=',', parse_dates=True,
                              infer_datetime_format=True, usecols=['Date', 'coldInFlowRate', 'hotInFlowRate', 'hotOutFlowRate', 'hotInTemp'
                                                                   ,'hotOutTemp', 'coldInTemp'])
-            except IOError:
-                df = pd.read_csv(os.path.join(target, item.filename), skiprows=[0], index_col=0, sep=',',
-                                 parse_dates=True,
-                                 infer_datetime_format=True,
-                                 usecols=['Date', 'coldInFlowRate', 'hotInFlowRate', 'hotOutFlowRate',])
-
+            except:
+                try:
+                    df = pd.read_csv(os.path.join(target, item.filename), skiprows=[0], index_col=0, sep=',',
+                                     parse_dates=True,
+                                     infer_datetime_format=True,
+                                     usecols=['Date', 'coldInFlowRate', 'hotInFlowRate', 'hotOutFlowRate'])
+                except:
+                    send_error("WARNING: " + item.filename + " failed to insert to database at {0}".format(datetime.now()))
+                    raise Exception("Unable to upload to database")
             df['buildingID'] = building.upper()
             print("Writing to DataBase")
             start = timer()
@@ -109,22 +140,18 @@ if __name__ == "__main__":
         target = config["target"] + building
 
         transport = paramiko.Transport(host, 22)
-        transport.connect(username=config['sshinfo']['username'], password=config['sshinfo']['password'])
+        try:
+            transport.connect(username=config['sshinfo']['username'], password=config['sshinfo']['password'])
+        except:
+            send_error("Unable to connect to {}".format(host))
+
         sftp = paramiko.SFTPClient.from_transport(transport)
 
         if not os.path.isdir(target):
             os.makedirs('%s' % (target))
 
         channel = transport.open_channel(kind="session")
-        # try:  ## Moving this functionality to the datalogger script.
-        #     print("Restarting Script")
-        #     current_time = datetime.now()
-        #     # channel.exec_command('‘sudo killall python')
-        #     channel.exec_command('nohup python /home/pi/CampusMeter/integrateable_multimeter_logger_with_temperature.py')
-        # except(IOError):
-        #     print("Script Reboot Failed")
-        #     current_time = datetime.now()
-        #     pass
+
         current_time = datetime.now()
         for item in sftp.listdir_attr(source):  # Iterate on files on datalogger, check datetime values to exclude one being currently written.
             if not datetime.fromtimestamp(sftp.stat(source + item.filename).st_mtime) > current_time:
@@ -149,24 +176,9 @@ if __name__ == "__main__":
 
         # if we don't want the whole directory,  find latest file with ls -1t | head -1 instead
 
-
-
         sftp.close()
         transport.close()
         print("Closing Connection")
-
-
-    hosts = []
-    config = {}
-    try:
-        with open("settings.json", 'r') as data_file:
-            config = json.load(data_file)
-    except OSError:
-        print("No list of hostnames found.")
-        exit(1)
-
-    for host in config['hosts']:
-        hosts.append(host['hostname'])
 
 
     # Instantiate a thread pool with 5 worker threads
