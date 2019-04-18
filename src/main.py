@@ -57,25 +57,14 @@ class ThreadPool:
         self.tasks.join()
 
 
-if __name__ == "__main__":
-    hosts = []
-    config = {}
-    try:
-        with open("settings.json", 'r') as data_file:
-            config = json.load(data_file)
-    except OSError:
-        print("No list of hostnames found.")
-        exit(1)
-
-    for host in config['hosts']:
-        hosts.append(host['hostname'])
+if __name__ == "__main__" and not os.environ['testing']:
 
     def send_error(data):
         message = {
-            "TEXT": data
+            "text": data
         }
         response = requests.post(
-            config['slack_webhook'],
+            url=config['slack_webhook'],
             data=json.dumps(message),
             headers={'Content-Type': 'application/json'}
         )
@@ -97,40 +86,86 @@ if __name__ == "__main__":
 
             client = DataFrameClient(host, port, user, password, dbname)
 
-            try: # Attempt to write using temp, if it fails, try to write using a different (in this case, old) structure of data.)
-                df = pd.read_csv(os.path.join(target, item.filename), skiprows=[0], index_col=0, sep=',', parse_dates=True,
-                             infer_datetime_format=True, usecols=['Date', 'coldInFlowRate', 'hotInFlowRate', 'hotOutFlowRate', 'hotInTemp'
-                                                                  ,'hotOutTemp', 'coldInTemp'])
+            # Attempt to write using temp, if it fails, try to write using a different
+            # (in this case, old) structure of data.)
+            try:
+                df = pd.read_csv(
+                    os.path.join(target, item.filename),
+                    skiprows=[0],
+                    index_col=0,
+                    sep=',',
+                    parse_dates=True,
+                    infer_datetime_format=True,
+                    usecols=[
+                        'Date',
+                        'coldInFlowRate',
+                        'hotInFlowRate',
+                        'hotOutFlowRate',
+                        'hotInTemp',
+                        'hotOutTemp',
+                        'coldInTemp'
+                    ]
+                )
             except:
                 try:
-                    df = pd.read_csv(os.path.join(target, item.filename), skiprows=[0], index_col=0, sep=',',
-                                     parse_dates=True,
-                                     infer_datetime_format=True,
-                                     usecols=['Date', 'coldInFlowRate', 'hotInFlowRate', 'hotOutFlowRate'])
+                    df = pd.read_csv(
+                        os.path.join(target, item.filename),
+                        skiprows=[0],
+                        index_col=0,
+                        sep=',',
+                        parse_dates=True,
+                        infer_datetime_format=True,
+                        usecols=[
+                            'Date',
+                            'coldInFlowRate',
+                            'hotInFlowRate',
+                            'hotOutFlowRate'
+                        ]
+                    )
                 except:
-                    send_error("WARNING: " + item.filename + " failed to insert to database at {0}".format(datetime.now()))
-                    raise Exception("Unable to upload to database")
+                    send_error("ERROR({0}): Failed to read {1} to pandas dataframe".format(datetime.now(), item.filename))
+
             df['buildingID'] = building.upper()
             print("Writing to DataBase")
             start = timer()
-            if 'hotOutTemp' in df.columns:
-                client.write_points(dataframe=df, measurement=config['database']['measurement'],
-                                field_columns={'coldInFlowRate': df[['coldInFlowRate']],
-                                                'hotInFlowRate': df[['hotInFlowRate']],
-                                                'hotOutFlowRate': df[['hotOutFlowRate']],
-                                                'hotInTemp': df[['hotInTemp']],
-                                                'hotOutTemp': df[['hotOutTemp']],
-                                                'coldInTemp': df[['coldInTemp']]},
-                                tag_columns={'buildingID': building.upper()}, protocol='line', numeric_precision=10, batch_size=2000)
-            else:
-                client.write_points(dataframe=df, measurement=config['database']['measurement'],
-                                    field_columns={'coldInFlowRate': df[['coldInFlowRate']],
-                                                   'hotInFlowRate': df[['hotInFlowRate']],
-                                                   'hotOutFlowRate': df[['hotOutFlowRate']]},
-                                    tag_columns={'buildingID': building.upper()}, protocol='line', numeric_precision=10,
-                                    batch_size=2000)
-            end = timer()
-            print("Completed writing to database for: " + item.filename, "Time Elapsed: ", (end - start))
+            try:
+                if 'hotOutTemp' in df.columns:
+                    client.write_points(
+                        dataframe=df,
+                        measurement=config['database']['measurement'],
+                        field_columns={
+                            'coldInFlowRate': df[['coldInFlowRate']],
+                            'hotInFlowRate': df[['hotInFlowRate']],
+                            'hotOutFlowRate': df[['hotOutFlowRate']],
+                            'hotInTemp': df[['hotInTemp']],
+                            'hotOutTemp': df[['hotOutTemp']],
+                            'coldInTemp': df[['coldInTemp']]
+                        },
+                        tag_columns={'buildingID': building.upper()},
+                        protocol='line',
+                        numeric_precision=10,
+                        batch_size=2000
+                    )
+                else:
+                    client.write_points(
+                        dataframe=df,
+                        measurement=config['database']['measurement'],
+                        field_columns={
+                            'coldInFlowRate': df[['coldInFlowRate']],
+                            'hotInFlowRate': df[['hotInFlowRate']],
+                            'hotOutFlowRate': df[['hotOutFlowRate']]
+                        },
+                        tag_columns={'buildingID': building.upper()},
+                        protocol='line',
+                        numeric_precision=10,
+                        batch_size=2000
+                    )
+                end = timer()
+                print("Completed writing to database for: " + item.filename, "Time Elapsed: ", (end - start))
+            except:
+                send_error("FAILED TO WRITE ERROR<<{0}>> ({1}) failed to write to database".format(datetime.now(), item.filename))
+                raise Exception("Unable to upload to database")
+
 
     # Function to be executed in a thread
     def connect(host):
@@ -141,7 +176,10 @@ if __name__ == "__main__":
 
         transport = paramiko.Transport(host, 22)
         try:
-            transport.connect(username=config['sshinfo']['username'], password=config['sshinfo']['password'])
+            transport.connect(
+                username=config['sshinfo']['username'],
+                password=config['sshinfo']['password']
+            )
         except:
             send_error("Unable to connect to {}".format(host))
 
@@ -180,6 +218,18 @@ if __name__ == "__main__":
         transport.close()
         print("Closing Connection")
 
+    #Import settings.json file
+    hosts = []
+    config = {}
+    try:
+        with open("settings.json", 'r') as data_file:
+            config = json.load(data_file)
+    except OSError:
+        print("No list of hostnames found.")
+        exit(1)
+
+    for host in config['hosts']:
+        hosts.append(host['hostname'])
 
     # Instantiate a thread pool with 5 worker threads
     pool = ThreadPool(6)
@@ -192,3 +242,29 @@ if __name__ == "__main__":
     print("Wait_completion")
     pool.wait_completion()
     print("Complete")
+
+else:
+    def send_error(data):
+        message = {
+            "text": data
+        }
+        response = requests.post(
+            url=config['slack_webhook'],
+            data=json.dumps(message),
+            headers={'Content-Type': 'application/json'}
+        )
+        if response.status_code != 200:
+            raise ValueError(
+                'Request to slack returned an error %s, the response is:\n%s'
+                % (response.status_code, response.text)
+            )
+
+
+    config = {}
+    try:
+        with open("settings.json", 'r') as data_file:
+            config = json.load(data_file)
+    except OSError:
+        print("No list of hostnames found.")
+        exit(1)
+    send_error("testing post request from MILTON script.")
