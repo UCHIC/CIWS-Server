@@ -1,7 +1,7 @@
 from influxdb import InfluxDBClient
 import time
 import json
-import pandas as pd
+import pandas as pdw
 
 
 def determine_interval(time):
