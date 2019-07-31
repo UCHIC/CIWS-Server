@@ -7,10 +7,10 @@ from influxdb import DataFrameClient
 from timeit import default_timer as timer
 from datetime import datetime
 import requests
+from pydrive.auth import GoogleAuth
 
 
 from queue import Queue
-
 from threading import Thread
 
 
