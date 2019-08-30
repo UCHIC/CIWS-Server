@@ -54,25 +54,7 @@ class ThreadPool:
         """ Wait for completion of all the tasks in the eweue """
         self.tasks.join()
 
-
-if __name__ == "__main__" and not os.environ['testing']:
-
-    def send_error(data):
-        message = {
-            "text": data
-        }
-        response = requests.post(
-            url=config['slack_webhook'],
-            data=json.dumps(message),
-            headers={'Content-Type': 'application/json'}
-        )
-        if response.status_code != 200:
-            raise ValueError(
-                'Request to slack returned an error %s, the response is:\n%s'
-                % (response.status_code, response.text)
-            )
-
-    def write_to_db(item, building, target):
+def write_to_db(item, building, target):
 
         if item.filename.endswith('.csv'):
             user = config["database"]["user"]
@@ -164,9 +146,8 @@ if __name__ == "__main__" and not os.environ['testing']:
                 send_error("FAILED TO WRITE ERROR<<{0}>> ({1}) failed to write to database".format(datetime.now(), item.filename))
                 raise Exception("Unable to upload to database")
 
-
-    # Function to be executed in a thread
-    def connect(host):
+  # Function to be executed in a thread
+def connect(host):
         print("Starting connection")
         source = '/home/pi/CampusMeter/'
         building = host[host.find('llc-') + 4]
@@ -215,7 +196,72 @@ if __name__ == "__main__" and not os.environ['testing']:
         sftp.close()
         transport.close()
         print("Closing Connection")
+def connect_local_source(host):
+        print("Starting connection")
+        source = '/home/pi/CampusMeter/'
+        building = host[host.find('llc-') + 4]
+        target = config["target"] + building
 
+        transport = paramiko.Transport(host, 22)
+        try:
+            transport.connect(
+                username=config['sshinfo']['username'],
+                password=config['sshinfo']['password']
+            )
+        except:
+            send_error("Unable to connect to {}".format(host))
+
+        sftp = paramiko.SFTPClient.from_transport(transport)
+
+        if not os.path.isdir(target):
+            os.makedirs('%s' % (target))
+
+        channel = transport.open_channel(kind="session")
+
+        current_time = datetime.now()
+        for item in sftp.listdir_attr(source):  # Iterate on files on datalogger, check datetime values to exclude one being currently written.
+            if not datetime.fromtimestamp(sftp.stat(source + item.filename).st_mtime) > current_time:
+                if not S_ISDIR(item.st_mode):
+                    if os.path.isfile(os.path.join(target, item.filename)) and os.stat(os.path.join(target, item.filename)).st_size != item.st_size:
+                        start = timer()
+                        print("Updating Data: ", item.filename)
+                        sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
+                        end = timer()
+                        print(item.filename + " updated successfully, time elapsed: ", (end - start))
+                        write_to_db(item, building, target)
+                    elif not os.path.isfile(os.path.join(target, item.filename)):
+                        start = timer()
+                        print("Copying Data: ", item.filename)
+                        sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
+                        end = timer()
+                        print(item.filename + " copied successfully, time elapsed: ", (end - start))
+                        write_to_db(item, building, target)
+                else:
+                    os.mkdir('%s%s' % (target, item.filename), ignore_existing=True)
+                    sftp.get_dir('%s%s' % (source, item.filename), '%s%s' % (target, item.filename))
+
+        # if we don't want the whole directory,  find latest file with ls -1t | head -1 instead
+
+        sftp.close()
+        transport.close()
+        print("Closing Connection")
+def send_error(data):
+        message = {
+            "text": data
+        }
+        response = requests.post(
+            url=config['slack_webhook'],
+            data=json.dumps(message),
+            headers={'Content-Type': 'application/json'}
+        )
+        if response.status_code != 200:
+            raise ValueError(
+                'Request to slack returned an error %s, the response is:\n%s'
+                % (response.status_code, response.text)
+            )
+
+
+if __name__ == "__main__" and not os.environ['slacktest']:
     #Import settings.json file
     hosts = []
     config = {}
@@ -241,7 +287,7 @@ if __name__ == "__main__" and not os.environ['testing']:
     pool.wait_completion()
     print("Complete")
 
-else:
+elif os.environ["slacktest"]:
     def send_error(data):
         message = {
             "text": data
@@ -266,3 +312,5 @@ else:
         print("No list of hostnames found.")
         exit(1)
     send_error("testing post request from MILTON script.")
+elif os.environ['singlesource']:
+    writ
