@@ -1,6 +1,8 @@
 import json
 import paramiko
 import os
+import sys
+import csv
 from stat import *
 import pandas as pd
 from influxdb import DataFrameClient
@@ -145,6 +147,63 @@ def write_to_db(item, building, target):
             except:
                 send_error("FAILED TO WRITE ERROR<<{0}>> ({1}) failed to write to database".format(datetime.now(), item.filename))
                 raise Exception("Unable to upload to database")
+    
+def write_to_db_local(*args, **kwargs):
+    item = kwargs["item"]
+
+    if item.name.lower().endswith('.csv'):
+        user = config["database"]["user"]
+        password = config["database"]["password"]
+        dbname = config["database"]["name"]
+        protocol = 'json'
+        port = config["database"]["port"]
+        host = config["database"]["host"]
+
+        client = DataFrameClient(host, port, user, password, dbname)
+
+        with open(item.path, newline='') as f:
+            reader = csv.reader(f)
+            site = next(reader)[0]
+            dataloggerID = next(reader)[0]
+            meterSize = next(reader)[0]
+        columns_to_use = ["Time", "Pulses"]
+ 
+        try:
+            df = pd.read_csv(
+                item.path,
+                # skiprows=3,
+                index_col=0,
+                sep=',',
+                parse_dates=True,
+                infer_datetime_format=True,
+                header=3,
+                usecols=["Time", "Pulses"]
+            )
+        except:
+            send_error("ERROR({0}): Failed to read {1} to pandas dataframe".format(datetime.now(), item.name))
+
+        print("Writing to DataBase")
+     
+        try:
+            client.write_points(
+                dataframe=df,
+                measurement=site,
+                field_columns={
+                    'Pulses': df[['Pulses']],
+                },
+                tags={
+                    'site': site,
+                    'datalogger ID': dataloggerID,
+                    'filename': item.name},
+                protocol='line',
+                # numeric_precision=10,
+                # batch_size=2000
+            )
+            print("Completed writing to database for: " + item.name)
+        except:
+            # send_error("FAILED TO WRITE ERROR<<{0}>> ({1}) failed to write to database".format(datetime.now(), item.name))
+            raise Exception("Unable to upload to database")
+
 
   # Function to be executed in a thread
 def connect(host):
@@ -196,55 +255,50 @@ def connect(host):
         sftp.close()
         transport.close()
         print("Closing Connection")
-def connect_local_source(host):
-        print("Starting connection")
-        source = '/home/pi/CampusMeter/'
-        building = host[host.find('llc-') + 4]
-        target = config["target"] + building
+def connect_local_source():
+    os.environ["OS"]
+    print("Starting connection")
+    source = config['local']['source']
+    target = config['local']['target']
+    kwargs = {"target": target, "source": source}
 
-        transport = paramiko.Transport(host, 22)
-        try:
-            transport.connect(
-                username=config['sshinfo']['username'],
-                password=config['sshinfo']['password']
-            )
-        except:
-            send_error("Unable to connect to {}".format(host))
+    if not os.path.isdir(target):
+        os.makedirs('%s' % (target))
 
-        sftp = paramiko.SFTPClient.from_transport(transport)
+    current_time = datetime.now()
+    source_files = [f for f in os.scandir(source) if f.is_file]
+    target_files = [f.path for f in os.scandir(target) if f.is_file]
+    for item in source_files:
+        item_stat = os.stat(item.path)
+        kwargs["item"] = item  # Iterate on files on datalogger, check datetime values to exclude one being currently written.
+        if not datetime.fromtimestamp(item_stat.st_mtime) > current_time:
+            if not S_ISDIR(item_stat[ST_MODE]): #isfile check
+                if os.path.isfile(os.path.join(target, item.name)) and os.stat(os.path.join(target, item.name)).st_size != item_stat.st_size:
+                    start = timer()
+                    print("Updating Data: ", item.name)
+                    os.system('cp ' + item.path + ' ' + target + '/' + item.name)
+                    end = timer()
+                    print(item.name + " updated successfully, time elapsed: ", (end - start))
+                    write_to_db_local(**kwargs)
+                elif not os.path.isfile(os.path.join(target, item.name)):
+                    start = timer()
+                    print("Copying Data: ", item.name)
+                    if sys.platform == 'win32':
+                        os.system('copy ' + item.path + ' ' + target + item.name)
+                    elif sys.platform == 'linux':
+                        os.system('cp ' + item.path + ' ' + target + item.name)
+                    end = timer()
+                    print(item.name + " copied successfully, time elapsed: ", (end - start))
+                    write_to_db_local(**kwargs)
+                else: 
+                    print("No new files/data detected")
+            else:
+                os.mkdir('%s%s' % (target, item.filename), ignore_existing=True)
+                # sftp.get_dir('%s%s' % (source, item.filename), '%s%s' % (target, item.filename))
 
-        if not os.path.isdir(target):
-            os.makedirs('%s' % (target))
+    # if we don't want the whole directory,  find latest file with ls -1t | head -1 instead
 
-        channel = transport.open_channel(kind="session")
-
-        current_time = datetime.now()
-        for item in sftp.listdir_attr(source):  # Iterate on files on datalogger, check datetime values to exclude one being currently written.
-            if not datetime.fromtimestamp(sftp.stat(source + item.filename).st_mtime) > current_time:
-                if not S_ISDIR(item.st_mode):
-                    if os.path.isfile(os.path.join(target, item.filename)) and os.stat(os.path.join(target, item.filename)).st_size != item.st_size:
-                        start = timer()
-                        print("Updating Data: ", item.filename)
-                        sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
-                        end = timer()
-                        print(item.filename + " updated successfully, time elapsed: ", (end - start))
-                        write_to_db(item, building, target)
-                    elif not os.path.isfile(os.path.join(target, item.filename)):
-                        start = timer()
-                        print("Copying Data: ", item.filename)
-                        sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
-                        end = timer()
-                        print(item.filename + " copied successfully, time elapsed: ", (end - start))
-                        write_to_db(item, building, target)
-                else:
-                    os.mkdir('%s%s' % (target, item.filename), ignore_existing=True)
-                    sftp.get_dir('%s%s' % (source, item.filename), '%s%s' % (target, item.filename))
-
-        # if we don't want the whole directory,  find latest file with ls -1t | head -1 instead
-
-        sftp.close()
-        transport.close()
-        print("Closing Connection")
+    print("Copy and upload finished")
 def send_error(data):
         message = {
             "text": data
@@ -261,56 +315,48 @@ def send_error(data):
             )
 
 
-if __name__ == "__main__" and not os.environ['slacktest']:
-    #Import settings.json file
-    hosts = []
-    config = {}
-    try:
-        with open("settings.json", 'r') as data_file:
-            config = json.load(data_file)
-    except OSError:
-        print("No list of hostnames found.")
-        exit(1)
+if __name__ == "__main__":
+    settingspath = os.path.abspath("src\\settings.json")
+    if os.environ['singlesource']:
+        config = {}
+        try:
+            with open(settingspath, 'r') as data_file:
+                config = json.load(data_file)
+        except OSError:
+            print("Unable to read settings.json.")
+            exit(1)
+        connect_local_source()
+    elif os.environ['slacktest']:
+        config = {}
+        try:
+            with open("settings.json", 'r') as data_file:
+                config = json.load(data_file)
+        except OSError:
+            print("No list of hostnames found.")
+            exit(1)
+        send_error("testing post request from MILTON script.")
+    else:
+        #Import settings.json file
+        hosts = []
+        config = {}
+        try:
+            with open("settings.json", 'r') as data_file:
+                config = json.load(data_file)
+        except OSError:
+            print("No list of hostnames found.")
+            exit(1)
 
-    for host in config['hosts']:
-        hosts.append(host['hostname'])
+        for host in config['hosts']:
+            hosts.append(host['hostname'])
 
-    # Instantiate a thread pool with 5 worker threads
-    pool = ThreadPool(6)
+        # Instantiate a thread pool with 5 worker threads
+        pool = ThreadPool(6)
 
-    # Add the jobs in bulk to the thread pool. Alternatively you could use
-    # `pool.add_task` to add single jobs. The code will block here, which
-    # makes it possible to cancel the thread pool with an exception when
-    # the currently running batch of workers is finished.
-    pool.map(connect, hosts)
-    print("Wait_completion")
-    pool.wait_completion()
-    print("Complete")
-
-elif os.environ["slacktest"]:
-    def send_error(data):
-        message = {
-            "text": data
-        }
-        response = requests.post(
-            url=config['slack_webhook'],
-            data=json.dumps(message),
-            headers={'Content-Type': 'application/json'}
-        )
-        if response.status_code != 200:
-            raise ValueError(
-                'Request to slack returned an error %s, the response is:\n%s'
-                % (response.status_code, response.text)
-            )
-
-
-    config = {}
-    try:
-        with open("settings.json", 'r') as data_file:
-            config = json.load(data_file)
-    except OSError:
-        print("No list of hostnames found.")
-        exit(1)
-    send_error("testing post request from MILTON script.")
-elif os.environ['singlesource']:
-    writ
+        # Add the jobs in bulk to the thread pool. Alternatively you could use
+        # `pool.add_task` to add single jobs. The code will block here, which
+        # makes it possible to cancel the thread pool with an exception when
+        # the currently running batch of workers is finished.
+        pool.map(connect, hosts)
+        print("Wait_completion")
+        pool.wait_completion()
+        print("Complete")

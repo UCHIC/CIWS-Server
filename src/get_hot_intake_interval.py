@@ -56,10 +56,10 @@ def time_elapsed(time1, time2):
     epoch1 = time.mktime(time.strptime(time1, "%Y-%m-%d"+"T"+"%H:%M:%S"+"Z"))
     epoch2 = time.mktime(time.strptime(time2, "%Y-%m-%d"+"T"+"%H:%M:%S"+"Z"))
     elapsed_time = epoch2 - epoch1
-    return elapsed_time
+    return elapsed_time + 1
 
 
-def write_data(value, df, building):
+def write_data(value, df, building, measurement):
     # df.loc[update_range[0]:update_range[1], 'hotOutFlowRate'] = value
     # df_transformed = df.loc[df['hotOutFlowRate']==value,:].copy()
     df['hotOutFlowRate'] = value
@@ -68,7 +68,7 @@ def write_data(value, df, building):
     client = DataFrameClient('odm2equipment.uwrl.usu.edu', 8086, 'root', 'foobar123', 'ciws')
     client.write_points(
         dataframe=df, 
-        measurement='return_flow', 
+        measurement=measurement, 
         field_columns={
             'hotOutFlowRate': df['hotOutFlowRate']
         },
@@ -94,8 +94,8 @@ if __name__ == "__main__":
         df = pd.DataFrame(columns=['time', 'hotOutFlowRate', 'buildingID'])
         to_write = []
         update_range = []
-        testDateBegin = "'2019-04-05T00:00:00Z'"
-        testDateEnd = "'2019-04-19T00:00:00Z'"
+        testDateBegin = config["testDateBegin"]
+        testDateEnd = config["testDateEnd"]
         hotOutFlag = 0
         hotOutTime = {
         'startTime': 0,
@@ -118,30 +118,29 @@ if __name__ == "__main__":
         result_set = client.query(sql_string)
         results = result_set.get_points()
         firstPulse = False
+        dataset_flag = False
         for index, res in enumerate(results):
-            if not res['hotOutFlowRate'] == 0:
+            if res['hotOutFlowRate'] != 0:
                 hotOutFlag += 1
-                if not firstPulse:
-                    df2 = pd.DataFrame([[res['time'], res['hotOutFlowRate'], res['buildingID']]], columns=['time', 'hotOutFlowRate', 'buildingID'])
-                    df = df.append(df2, ignore_index=True)
-                    hotOutTime['startTime'] = res['time']
-                firstPulse = True
-                # if len(update_range) < 2:
-                #     update_range.append(index)  
+                if not firstPulse:  # Ensure we start from a complete dataset by only beginning to write to dataframes after an initial pulse
+                    firstPulse = True # Denotes the first non-zero value has been hit, and the rest processing can begin
+                    dataset_flag = True # Denotes that the next entry should be the startflag for the dataset
                 if hotOutFlag == 2:
+                    hotOutTime['endTime'] = res['time']
                     timeElapsed = time_elapsed(hotOutTime['startTime'], hotOutTime['endTime'])
                     value_to_write = determine_interval(timeElapsed)
-                    # Write Data here
-                    write_data(value_to_write, df, building)
-                    hotOutFlag = 1
-                    hotOutTime['startTime'] = res['time']
-                    df = pd.DataFrame(columns=['time', 'hotOutFlowRate'])
                     df2 = pd.DataFrame([[res['time'], res['hotOutFlowRate'], res['buildingID']]], columns=['time', 'hotOutFlowRate', 'buildingID'])
                     df = df.append(df2, ignore_index=True)
-                    # update_range = []
-                    # update_range.append(index)
+                    # Write Data here
+                    write_data(value_to_write, df, building, measurement)
+                    hotOutFlag = 1
+                    dataset_flag = True
+                    df = pd.DataFrame(columns=['time', 'hotOutFlowRate'])
+
             elif firstPulse:
-                hotOutTime['endTime'] = res['time']
+                if dataset_flag:
+                    hotOutTime['startTime'] = res['time']
+                    dataset_flag = False
                 df2 = pd.DataFrame([[res['time'], res['hotOutFlowRate'], res['buildingID']]], columns=['time', 'hotOutFlowRate', 'buildingID'])
                 df = df.append(df2, ignore_index=True)
             print(res)
