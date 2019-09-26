@@ -56,6 +56,11 @@ class ThreadPool:
         """ Wait for completion of all the tasks in the eweue """
         self.tasks.join()
 
+def parse_site_name(site):
+    translation = {ord(' '): None, ord('#'): '_', ord(':'): None}
+    site_name = site.translate(translation).lower()
+    return site_name
+
 def write_to_db(item, building, target):
 
         if item.filename.endswith('.csv'):
@@ -167,6 +172,9 @@ def write_to_db_local(*args, **kwargs):
             dataloggerID = next(reader)[0]
             meterSize = next(reader)[0]
         columns_to_use = ["Time", "Pulses"]
+
+        site = parse_site_name(site)
+        dataloggerID = parse_site_name(dataloggerID)
  
         try:
             df = pd.read_csv(
@@ -183,6 +191,9 @@ def write_to_db_local(*args, **kwargs):
             send_error("ERROR({0}): Failed to read {1} to pandas dataframe".format(datetime.now(), item.name))
 
         print("Writing to DataBase")
+        df['Site'] = site
+        df['Filename'] = item.name
+        df['DataloggerID'] = dataloggerID
      
         try:
             client.write_points(
@@ -190,14 +201,12 @@ def write_to_db_local(*args, **kwargs):
                 measurement=site,
                 field_columns={
                     'Pulses': df[['Pulses']],
+                    'Filename': item.name,
+                    'DataloggerID': dataloggerID
                 },
-                tags={
-                    'site': site,
-                    'datalogger ID': dataloggerID,
-                    'filename': item.name},
-                protocol='line',
-                # numeric_precision=10,
-                # batch_size=2000
+                tag_columns ={
+                    'Site': site,
+                }
             )
             print("Completed writing to database for: " + item.name)
         except:
@@ -275,21 +284,34 @@ def connect_local_source():
             if not S_ISDIR(item_stat[ST_MODE]): #isfile check
                 if os.path.isfile(os.path.join(target, item.name)) and os.stat(os.path.join(target, item.name)).st_size != item_stat.st_size:
                     start = timer()
-                    print("Updating Data: ", item.name)
-                    os.system('cp ' + item.path + ' ' + target + '/' + item.name)
-                    end = timer()
-                    print(item.name + " updated successfully, time elapsed: ", (end - start))
-                    write_to_db_local(**kwargs)
+                    try:
+                        write_to_db_local(**kwargs)
+                        print("Copying Data: ", item.name)
+                        if sys.platform == 'win32':
+                            os.system('copy ' + item.path + ' ' + target + item.name)
+                        elif sys.platform == 'linux':
+                            os.system('cp ' + item.path + ' ' + target + item.name)
+                        end = timer()
+                        print(item.name + " copied successfully, time elapsed: ", (end - start))
+                    except:
+                        print("Data Upload failed for: {0}\n{0} has not been copied", item.name)
+                        pass
                 elif not os.path.isfile(os.path.join(target, item.name)):
                     start = timer()
-                    print("Copying Data: ", item.name)
-                    if sys.platform == 'win32':
-                        os.system('copy ' + item.path + ' ' + target + item.name)
-                    elif sys.platform == 'linux':
-                        os.system('cp ' + item.path + ' ' + target + item.name)
-                    end = timer()
-                    print(item.name + " copied successfully, time elapsed: ", (end - start))
-                    write_to_db_local(**kwargs)
+                    try:
+                        write_to_db_local(**kwargs)
+                        print("Copying Data: ", item.name)
+                        if sys.platform == 'win32':
+                            os.system('copy ' + item.path + ' ' + target + item.name)
+                        elif sys.platform == 'linux':
+                            os.system('cp ' + item.path + ' ' + target + item.name)
+                        end = timer()
+                        print(item.name + " copied successfully, time elapsed: ", (end - start))
+                    except:
+                        print("Data Upload failed for: {0}\n{0} has not been copied", item.name)
+                        pass
+                   
+                    
                 else: 
                     print("No new files/data detected")
             else:
@@ -298,7 +320,7 @@ def connect_local_source():
 
     # if we don't want the whole directory,  find latest file with ls -1t | head -1 instead
 
-    print("Copy and upload finished")
+    print("Process complete")
 def send_error(data):
         message = {
             "text": data
