@@ -1,16 +1,15 @@
 import json
 import paramiko
 import os
-import sys
+import sys, argparse
 import csv
+import getopt
 from stat import *
 import pandas as pd
 from influxdb import DataFrameClient
 from timeit import default_timer as timer
 from datetime import datetime
 import requests
-from pydrive.auth import GoogleAuth
-
 
 from queue import Queue
 from threading import Thread
@@ -57,7 +56,7 @@ class ThreadPool:
         self.tasks.join()
 
 def parse_site_name(site):
-    translation = {ord(' '): None, ord('#'): '_', ord(':'): None}
+    translation = {ord(' '): None, ord('#'): '_', ord(':'): None, ord('0'): None}
     site_name = site.translate(translation).lower()
     return site_name
 
@@ -171,10 +170,11 @@ def write_to_db_local(*args, **kwargs):
             site = next(reader)[0]
             dataloggerID = next(reader)[0]
             meterSize = next(reader)[0]
-        columns_to_use = ["Time", "Pulses"]
-
+        
         site = parse_site_name(site)
         dataloggerID = parse_site_name(dataloggerID)
+        dateparse = lambda x: pd.to_datetime(x, yearfirst=True)
+
  
         try:
             df = pd.read_csv(
@@ -182,8 +182,7 @@ def write_to_db_local(*args, **kwargs):
                 # skiprows=3,
                 index_col=0,
                 sep=',',
-                parse_dates=True,
-                infer_datetime_format=True,
+                date_parser=dateparse,
                 header=3,
                 usecols=["Time", "Pulses"]
             )
@@ -313,7 +312,7 @@ def connect_local_source():
                    
                     
                 else: 
-                    print("No new files/data detected")
+                    print(item.name + ": already up to date.")
             else:
                 os.mkdir('%s%s' % (target, item.filename), ignore_existing=True)
                 # sftp.get_dir('%s%s' % (source, item.filename), '%s%s' % (target, item.filename))
@@ -339,7 +338,18 @@ def send_error(data):
 
 if __name__ == "__main__":
     settingspath = os.path.abspath("src\\settings.json")
-    if os.environ['singlesource']:
+    availableArgs = "Available arguments at this time are: single_source=true"
+    parser = argparse.ArgumentParser(description= availableArgs)
+    parser.add_argument("-single_source", "--single_source", 
+        help="Collect data from single local source, instead of multiple remote sources",
+        action="store_true"
+        )
+    args = parser.parse_args()
+
+    fullCmdArguments = sys.argv
+    argumentList = fullCmdArguments[1:]
+    gnuOptions = ["singlesource=true"]
+    if os.environ['singlesource'] or args.single_source:
         config = {}
         try:
             with open(settingspath, 'r') as data_file:

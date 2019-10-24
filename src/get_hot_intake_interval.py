@@ -5,6 +5,12 @@ import pandas as pd
 from queue import Queue
 from threading import Thread
 
+##
+# This Script is run independantly from the main script, its purpose is to query data
+# from an influxdb database, then parse each "Pulse" in to a pandas dataframe, then update that datafram with the proper flow rate
+# It then adds that temporary dataframe to a larger one, which at the end of iteration will be uploaded to an influxdb measurement.
+## 
+
 
 class Worker(Thread):
     """ Thread executing tasks from a given tasks queue """
@@ -76,8 +82,6 @@ def write_data(value, df, building, measurement):
         tag_columns={'buildingID': building},
         time_precision='ms'
 
-
-
     )
 
 if __name__ == "__main__":
@@ -109,9 +113,6 @@ if __name__ == "__main__":
         host = config["database"]["host"]
 
         client = InfluxDBClient(host, port, user, password, dbname)
-
-
-        
 
         sql_string = """SELECT "hotOutFlowRate", "buildingID" FROM "flow" WHERE "buildingID" = """+building+""" AND time >= """+testDateBegin+""" AND time <= """+testDateEnd+""""""
 
