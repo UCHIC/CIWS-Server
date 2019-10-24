@@ -264,7 +264,6 @@ def connect(host):
         transport.close()
         print("Closing Connection")
 def connect_local_source():
-    os.environ["OS"]
     print("Starting connection")
     source = config['local']['source']
     target = config['local']['target']
