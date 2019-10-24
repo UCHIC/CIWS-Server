@@ -337,9 +337,9 @@ def send_error(data):
 
 
 if __name__ == "__main__":
-    try:
-        settingspath = os.path.abspath(".\\settings.json")
-    except:
+    if sys.platform == "win32":
+        settingspath = os.path.abspath("src\\settings.json") #Bad temp fix, should be .\\settings.json  Set it like this because VS code was being dumb.
+    else:
         settingspath = os.path.abspath("./settings.json")
     availableArgs = "Available arguments at this time are: single_source=true"
     parser = argparse.ArgumentParser(description= availableArgs)
