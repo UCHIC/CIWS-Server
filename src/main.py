@@ -337,7 +337,10 @@ def send_error(data):
 
 
 if __name__ == "__main__":
-    settingspath = os.path.abspath("src\\settings.json")
+    try:
+        settingspath = os.path.abspath(".\\settings.json")
+    except:
+        settingspath = os.path.abspath("./settings.json")
     availableArgs = "Available arguments at this time are: single_source=true"
     parser = argparse.ArgumentParser(description= availableArgs)
     parser.add_argument("-single_source", "--single_source", 
