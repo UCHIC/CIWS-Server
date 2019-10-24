@@ -346,10 +346,7 @@ if __name__ == "__main__":
         )
     args = parser.parse_args()
 
-    fullCmdArguments = sys.argv
-    argumentList = fullCmdArguments[1:]
-    gnuOptions = ["singlesource=true"]
-    if os.environ['singlesource'] or args.single_source:
+    if args.single_source:
         config = {}
         try:
             with open(settingspath, 'r') as data_file:
