@@ -1,9 +1,9 @@
 import json
 import paramiko
 import os
-import sys, argparse
+import sys
+import argparse
 import csv
-import getopt
 from stat import *
 import pandas as pd
 from influxdb import DataFrameClient
@@ -17,6 +17,7 @@ from threading import Thread
 
 class Worker(Thread):
     """ Thread executing tasks from a given tasks queue """
+
     def __init__(self, tasks):
         Thread.__init__(self)
         self.tasks = tasks
@@ -37,6 +38,7 @@ class Worker(Thread):
 
 class ThreadPool:
     """ Pool of threads consuming tasks from a queue """
+
     def __init__(self, num_threads):
         self.tasks = Queue(num_threads)
         for _ in range(num_threads):
@@ -55,25 +57,45 @@ class ThreadPool:
         """ Wait for completion of all the tasks in the eweue """
         self.tasks.join()
 
+
 def parse_site_name(site):
     translation = {ord(' '): None, ord('#'): '_', ord(':'): None, ord('0'): None}
     site_name = site.translate(translation).lower()
     return site_name
 
+
 def write_to_db(item, building, target):
+    if item.filename.endswith('.csv'):
+        user = config["database"]["user"]
+        password = config["database"]["password"]
+        dbname = config["database"]["name"]
+        protocol = 'json'
+        port = config["database"]["port"]
+        host = config["database"]["host"]
 
-        if item.filename.endswith('.csv'):
-            user = config["database"]["user"]
-            password = config["database"]["password"]
-            dbname = config["database"]["name"]
-            protocol = 'json'
-            port = config["database"]["port"]
-            host = config["database"]["host"]
+        client = DataFrameClient(host, port, user, password, dbname)
 
-            client = DataFrameClient(host, port, user, password, dbname)
-
-            # Attempt to write using temp, if it fails, try to write using a different
-            # (in this case, old) structure of data.)
+        # Attempt to write using temp, if it fails, try to write using a different
+        # (in this case, old) structure of data.)
+        try:
+            df = pd.read_csv(
+                os.path.join(target, item.filename),
+                skiprows=[0],
+                index_col=0,
+                sep=',',
+                parse_dates=True,
+                infer_datetime_format=True,
+                usecols=[
+                    'Date',
+                    'coldInFlowRate',
+                    'hotInFlowRate',
+                    'hotOutFlowRate',
+                    'hotInTemp',
+                    'hotOutTemp',
+                    'coldInTemp'
+                ]
+            )
+        except:
             try:
                 df = pd.read_csv(
                     os.path.join(target, item.filename),
@@ -86,72 +108,55 @@ def write_to_db(item, building, target):
                         'Date',
                         'coldInFlowRate',
                         'hotInFlowRate',
-                        'hotOutFlowRate',
-                        'hotInTemp',
-                        'hotOutTemp',
-                        'coldInTemp'
+                        'hotOutFlowRate'
                     ]
                 )
             except:
-                try:
-                    df = pd.read_csv(
-                        os.path.join(target, item.filename),
-                        skiprows=[0],
-                        index_col=0,
-                        sep=',',
-                        parse_dates=True,
-                        infer_datetime_format=True,
-                        usecols=[
-                            'Date',
-                            'coldInFlowRate',
-                            'hotInFlowRate',
-                            'hotOutFlowRate'
-                        ]
-                    )
-                except:
-                    send_error("ERROR({0}): Failed to read {1} to pandas dataframe".format(datetime.now(), item.filename))
+                send_error("ERROR({0}): Failed to read {1} to pandas dataframe".format(datetime.now(), item.filename))
 
-            df['buildingID'] = building.upper()
-            print("Writing to DataBase")
-            start = timer()
-            try:
-                if 'hotOutTemp' in df.columns:
-                    client.write_points(
-                        dataframe=df,
-                        measurement=config['database']['measurement'],
-                        field_columns={
-                            'coldInFlowRate': df[['coldInFlowRate']],
-                            'hotInFlowRate': df[['hotInFlowRate']],
-                            'hotOutFlowRate': df[['hotOutFlowRate']],
-                            'hotInTemp': df[['hotInTemp']],
-                            'hotOutTemp': df[['hotOutTemp']],
-                            'coldInTemp': df[['coldInTemp']]
-                        },
-                        tag_columns={'buildingID': building.upper()},
-                        protocol='line',
-                        numeric_precision=10,
-                        batch_size=2000
-                    )
-                else:
-                    client.write_points(
-                        dataframe=df,
-                        measurement=config['database']['measurement'],
-                        field_columns={
-                            'coldInFlowRate': df[['coldInFlowRate']],
-                            'hotInFlowRate': df[['hotInFlowRate']],
-                            'hotOutFlowRate': df[['hotOutFlowRate']]
-                        },
-                        tag_columns={'buildingID': building.upper()},
-                        protocol='line',
-                        numeric_precision=10,
-                        batch_size=2000
-                    )
-                end = timer()
-                print("Completed writing to database for: " + item.filename, "Time Elapsed: ", (end - start))
-            except:
-                send_error("FAILED TO WRITE ERROR<<{0}>> ({1}) failed to write to database".format(datetime.now(), item.filename))
-                raise Exception("Unable to upload to database")
-    
+        df['buildingID'] = building.upper()
+        print("Writing to DataBase")
+        start = timer()
+        try:
+            if 'hotOutTemp' in df.columns:
+                client.write_points(
+                    dataframe=df,
+                    measurement=config['database']['measurement'],
+                    field_columns={
+                        'coldInFlowRate': df[['coldInFlowRate']],
+                        'hotInFlowRate': df[['hotInFlowRate']],
+                        'hotOutFlowRate': df[['hotOutFlowRate']],
+                        'hotInTemp': df[['hotInTemp']],
+                        'hotOutTemp': df[['hotOutTemp']],
+                        'coldInTemp': df[['coldInTemp']]
+                    },
+                    tag_columns={'buildingID': building.upper()},
+                    protocol='line',
+                    numeric_precision=10,
+                    batch_size=2000
+                )
+            else:
+                client.write_points(
+                    dataframe=df,
+                    measurement=config['database']['measurement'],
+                    field_columns={
+                        'coldInFlowRate': df[['coldInFlowRate']],
+                        'hotInFlowRate': df[['hotInFlowRate']],
+                        'hotOutFlowRate': df[['hotOutFlowRate']]
+                    },
+                    tag_columns={'buildingID': building.upper()},
+                    protocol='line',
+                    numeric_precision=10,
+                    batch_size=2000
+                )
+            end = timer()
+            print("Completed writing to database for: " + item.filename, "Time Elapsed: ", (end - start))
+        except:
+            send_error(
+                "FAILED TO WRITE ERROR<<{0}>> ({1}) failed to write to database".format(datetime.now(), item.filename))
+            raise Exception("Unable to upload to database")
+
+
 def write_to_db_local(*args, **kwargs):
     item = kwargs["item"]
 
@@ -170,12 +175,11 @@ def write_to_db_local(*args, **kwargs):
             site = next(reader)[0]
             dataloggerID = next(reader)[0]
             meterSize = next(reader)[0]
-        
+
         site = parse_site_name(site)
         dataloggerID = parse_site_name(dataloggerID)
         dateparse = lambda x: pd.to_datetime(x, yearfirst=True)
 
- 
         try:
             df = pd.read_csv(
                 item.path,
@@ -193,7 +197,7 @@ def write_to_db_local(*args, **kwargs):
         df['Site'] = site
         df['Filename'] = item.name
         df['DataloggerID'] = dataloggerID
-     
+
         try:
             client.write_points(
                 dataframe=df,
@@ -203,7 +207,7 @@ def write_to_db_local(*args, **kwargs):
                     'Filename': item.name,
                     'DataloggerID': dataloggerID
                 },
-                tag_columns ={
+                tag_columns={
                     'Site': site,
                 }
             )
@@ -213,56 +217,60 @@ def write_to_db_local(*args, **kwargs):
             raise Exception("Unable to upload to database")
 
 
-  # Function to be executed in a thread
+# Function to be executed in a thread
 def connect(host):
-        print("Starting connection")
-        source = '/home/pi/CampusMeter/'
-        building = host[host.find('llc-') + 4]
-        target = config["target"] + building
+    print("Starting connection")
+    source = '/home/pi/CampusMeter/'
+    building = host[host.find('llc-') + 4]
+    target = config["target"] + building
 
-        transport = paramiko.Transport(host, 22)
-        try:
-            transport.connect(
-                username=config['sshinfo']['username'],
-                password=config['sshinfo']['password']
-            )
-        except:
-            send_error("Unable to connect to {}".format(host))
+    transport = paramiko.Transport(host, 22)
+    try:
+        transport.connect(
+            username=config['sshinfo']['username'],
+            password=config['sshinfo']['password']
+        )
+    except:
+        send_error("Unable to connect to {}".format(host))
 
-        sftp = paramiko.SFTPClient.from_transport(transport)
+    sftp = paramiko.SFTPClient.from_transport(transport)
 
-        if not os.path.isdir(target):
-            os.makedirs('%s' % (target))
+    if not os.path.isdir(target):
+        os.makedirs('%s' % (target))
 
-        channel = transport.open_channel(kind="session")
+    channel = transport.open_channel(kind="session")
 
-        current_time = datetime.now()
-        for item in sftp.listdir_attr(source):  # Iterate on files on datalogger, check datetime values to exclude one being currently written.
-            if not datetime.fromtimestamp(sftp.stat(source + item.filename).st_mtime) > current_time:
-                if not S_ISDIR(item.st_mode):
-                    if os.path.isfile(os.path.join(target, item.filename)) and os.stat(os.path.join(target, item.filename)).st_size != item.st_size:
-                        start = timer()
-                        print("Updating Data: ", item.filename)
-                        sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
-                        end = timer()
-                        print(item.filename + " updated successfully, time elapsed: ", (end - start))
-                        write_to_db(item, building, target)
-                    elif not os.path.isfile(os.path.join(target, item.filename)):
-                        start = timer()
-                        print("Copying Data: ", item.filename)
-                        sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
-                        end = timer()
-                        print(item.filename + " copied successfully, time elapsed: ", (end - start))
-                        write_to_db(item, building, target)
-                else:
-                    os.mkdir('%s%s' % (target, item.filename), ignore_existing=True)
-                    sftp.get_dir('%s%s' % (source, item.filename), '%s%s' % (target, item.filename))
+    current_time = datetime.now()
+    for item in sftp.listdir_attr(
+            source):  # Iterate on files on datalogger, check datetime values to exclude one being currently written.
+        if not datetime.fromtimestamp(sftp.stat(source + item.filename).st_mtime) > current_time:
+            if not S_ISDIR(item.st_mode):
+                if os.path.isfile(os.path.join(target, item.filename)) and os.stat(
+                        os.path.join(target, item.filename)).st_size != item.st_size:
+                    start = timer()
+                    print("Updating Data: ", item.filename)
+                    sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
+                    end = timer()
+                    print(item.filename + " updated successfully, time elapsed: ", (end - start))
+                    write_to_db(item, building, target)
+                elif not os.path.isfile(os.path.join(target, item.filename)):
+                    start = timer()
+                    print("Copying Data: ", item.filename)
+                    sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
+                    end = timer()
+                    print(item.filename + " copied successfully, time elapsed: ", (end - start))
+                    write_to_db(item, building, target)
+            else:
+                os.mkdir('%s%s' % (target, item.filename), ignore_existing=True)
+                sftp.get_dir('%s%s' % (source, item.filename), '%s%s' % (target, item.filename))
 
-        # if we don't want the whole directory,  find latest file with ls -1t | head -1 instead
+    # if we don't want the whole directory,  find latest file with ls -1t | head -1 instead
 
-        sftp.close()
-        transport.close()
-        print("Closing Connection")
+    sftp.close()
+    transport.close()
+    print("Closing Connection")
+
+
 def connect_local_source():
     print("Starting connection")
     source = config['local']['source']
@@ -279,8 +287,9 @@ def connect_local_source():
         item_stat = os.stat(item.path)
         kwargs["item"] = item  # Iterate on files on datalogger, check datetime values to exclude one being currently written.
         if not datetime.fromtimestamp(item_stat.st_mtime) > current_time:
-            if not S_ISDIR(item_stat[ST_MODE]): #isfile check
-                if os.path.isfile(os.path.join(target, item.name)) and os.stat(os.path.join(target, item.name)).st_size != item_stat.st_size:
+            if not S_ISDIR(item_stat[ST_MODE]):  # isfile check
+                if os.path.isfile(os.path.join(target, item.name)) and os.stat(
+                        os.path.join(target, item.name)).st_size != item_stat.st_size:
                     start = timer()
                     try:
                         write_to_db_local(**kwargs)
@@ -308,9 +317,9 @@ def connect_local_source():
                     except:
                         print("Data Upload failed for: {0}\n{0} has not been copied", item.name)
                         pass
-                   
-                    
-                else: 
+
+
+                else:
                     print(item.name + ": already up to date.")
             else:
                 os.mkdir('%s%s' % (target, item.filename), ignore_existing=True)
@@ -319,45 +328,45 @@ def connect_local_source():
     # if we don't want the whole directory,  find latest file with ls -1t | head -1 instead
 
     print("Process complete")
+
+
 def send_error(data):
-        message = {
-            "text": data
-        }
-        response = requests.post(
-            url=config['slack_webhook'],
-            data=json.dumps(message),
-            headers={'Content-Type': 'application/json'}
+    message = {
+        "text": data
+    }
+    response = requests.post(
+        url=config['slack_webhook'],
+        data=json.dumps(message),
+        headers={'Content-Type': 'application/json'}
+    )
+    if response.status_code != 200:
+        raise ValueError(
+            'Request to slack returned an error %s, the response is:\n%s'
+            % (response.status_code, response.text)
         )
-        if response.status_code != 200:
-            raise ValueError(
-                'Request to slack returned an error %s, the response is:\n%s'
-                % (response.status_code, response.text)
-            )
 
 
 if __name__ == "__main__":
-    if sys.platform == "win32":
-        settingspath = os.path.abspath("src\\settings.json") #Bad temp fix, should be .\\settings.json  Set it like this because VS code was being dumb.
-    else:
-        settingspath = os.path.abspath("./settings.json")
+    settings_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'settings.json')
+
     availableArgs = "Available arguments at this time are: single_source=true"
-    parser = argparse.ArgumentParser(description= availableArgs)
-    parser.add_argument("-single_source", "--single_source", 
-        help="Collect data from single local source, instead of multiple remote sources",
-        action="store_true"
-        )
+    parser = argparse.ArgumentParser(description=availableArgs)
+    parser.add_argument("-single_source", "--single_source",
+                        help="Collect data from single local source, instead of multiple remote sources",
+                        action="store_true"
+                        )
     args = parser.parse_args()
 
     if args.single_source:
         config = {}
         try:
-            with open(settingspath, 'r') as data_file:
+            with open(settings_path, 'r') as data_file:
                 config = json.load(data_file)
         except OSError:
             print("Unable to read settings.json.")
             exit(1)
         connect_local_source()
-    elif os.environ['slacktest']:
+    elif 'slacktest' in os.environ:
         config = {}
         try:
             with open("settings.json", 'r') as data_file:
@@ -367,7 +376,7 @@ if __name__ == "__main__":
             exit(1)
         send_error("testing post request from MILTON script.")
     else:
-        #Import settings.json file
+        # Import settings.json file
         hosts = []
         config = {}
         try:
