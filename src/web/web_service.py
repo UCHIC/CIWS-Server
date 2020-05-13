@@ -56,3 +56,6 @@ def data_api_upload() -> Dict[str, str]:
 if __name__ == '__main__':
     """ Run locally on port 8080 if not run through a wsgi. """
     bottle.run(host='localhost', port=8080, debug=True)
+else:
+    """ Return wsgi application. """
+    application = bottle.default_app()
