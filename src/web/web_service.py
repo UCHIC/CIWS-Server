@@ -8,15 +8,16 @@ import bottle
 def get_file_save_directory() -> str:
     """ Gets the directory where the files will be copied to """
     settings_path: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'settings.json')
+    default_directory: str = 'data'
     data_file: TextIO
 
     if not os.path.exists(settings_path):
-        return 'data'  # TODO: maybe return a default save directory?
+        return default_directory
 
     with open(settings_path, 'r') as data_file:
         config: Dict[str: Any] = json.load(data_file)
 
-    return config['local']['source']
+    return config['local']['source'] if 'local' in config and 'source' in config['local'] else default_directory
 
 
 # @bottle.get('/data-api')
