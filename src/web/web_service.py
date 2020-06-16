@@ -1,22 +1,32 @@
+import hashlib
 import os
+import sys
 import json
 from typing import Dict, List, Any, TextIO
 
 import bottle
 
 
-def get_file_save_directory() -> str:
-    """ Gets the directory where the files will be copied to """
+def get_app_config() -> Dict[str, Any]:
     settings_path: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'settings.json')
-    default_directory: str = 'data'
     data_file: TextIO
 
-    if not os.path.exists(settings_path):
-        return default_directory
-
     with open(settings_path, 'r') as data_file:
-        config: Dict[str: Any] = json.load(data_file)
+        app_config: Dict[str, Any] = json.load(data_file)
 
+    return app_config
+
+
+# def authorize(passcode: str) -> bool:
+#     token: str = config['upload_token'] if 'upload_token' in config else ''
+#     hashed_passcode: str = hashlib.sha256(passcode.encode()).hexdigest()
+#     return hashed_passcode == token
+
+#err = HTTPError(401, text)
+def get_file_save_directory() -> str:
+    """ Gets the directory where the files will be copied to """
+
+    default_directory: str = 'data'
     return config['local']['source'] if 'local' in config and 'source' in config['local'] else default_directory
 
 
@@ -26,6 +36,7 @@ def get_file_save_directory() -> str:
 
 
 @bottle.post('/data-api')
+# @bottle.auth_basic(authorize)
 def data_api_upload() -> Dict[str, str]:
     """ Saves csv files in the source folder for later processing """
     save_path: str = get_file_save_directory()
@@ -52,6 +63,11 @@ def data_api_upload() -> Dict[str, str]:
 
     return messages
 
+
+try:
+    config = get_app_config()
+except IOError as ioe:
+    sys.exit("Settings file not found!")
 
 if __name__ == '__main__':
     """ Run locally on port 8080 if not run through a wsgi. """

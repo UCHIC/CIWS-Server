@@ -301,7 +301,7 @@ def connect_local_source():
                         end = timer()
                         print(item.name + " copied successfully, time elapsed: ", (end - start))
                     except:
-                        print("Data Upload failed for: {0}\n{0} has not been copied", item.name)
+                        print(f"Data Upload failed for: {item.name}\n{item.name} has not been copied")
                         pass
                 elif not os.path.isfile(os.path.join(target, item.name)):
                     start = timer()
@@ -315,7 +315,7 @@ def connect_local_source():
                         end = timer()
                         print(item.name + " copied successfully, time elapsed: ", (end - start))
                     except:
-                        print("Data Upload failed for: {0}\n{0} has not been copied", item.name)
+                        print(f"Data Upload failed for: {item.name}\n{item.name} has not been copied")
                         pass
 
 
