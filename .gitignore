@@ -5,3 +5,5 @@ screenlog.0
 .idea/
 src/settings.json
 venv/
+/src/data_loading_service/settings.json
+/src/data_transfer_manager/settings.json

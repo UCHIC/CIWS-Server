@@ -8,7 +8,7 @@ import bottle
 
 
 def get_app_config() -> Dict[str, Any]:
-    settings_path: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'settings.json')
+    settings_path: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data_loading_service', 'settings.json')
     data_file: TextIO
 
     with open(settings_path, 'r') as data_file:
