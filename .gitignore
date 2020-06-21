@@ -7,3 +7,4 @@ src/settings.json
 venv/
 /src/data_loading_service/settings.json
 /src/data_transfer_manager/settings.json
+/src/data_posting_service/settings.json
