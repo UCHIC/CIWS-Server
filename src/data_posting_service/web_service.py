@@ -45,7 +45,7 @@ def data_api_upload() -> Dict[str, str]:
 
     for uploaded_file in files:
         name, ext = os.path.splitext(uploaded_file.filename)
-        if ext not in ('.csv',):
+        if ext.lower() not in ('.csv',):
             messages[uploaded_file.filename] = f'File {uploaded_file.filename} has an unsupported file type: {ext}'
             continue
         try:
