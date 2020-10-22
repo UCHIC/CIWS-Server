@@ -1,8 +1,7 @@
 import hashlib
 import os
 import sys
-import json
-from typing import Dict, List, Any, TextIO
+from typing import Dict, List, Any
 
 import bottle
 
@@ -67,4 +66,4 @@ if __name__ == '__main__':
     bottle.run(host='localhost', port=8080, debug=True)
 else:
     """ Return wsgi application. """
-    application = bottle.default_app()
+    application = app.get_logging_middleware(bottle.default_app(), config)
