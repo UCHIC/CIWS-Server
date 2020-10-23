@@ -4,6 +4,7 @@ import sys
 from typing import Dict, List, Any
 
 import bottle
+import canister
 
 from data_posting_service import auth, app
 
@@ -61,9 +62,14 @@ try:
 except IOError as ioe:
     sys.exit("Settings file not found!")
 
+
+application = bottle.default_app()
+application.config.load_config('bottle.conf')
+application.install(canister.Canister())
+
 if __name__ == '__main__':
     """ Run locally on port 8080 if not run through a wsgi. """
-    bottle.run(host='localhost', port=8080, debug=True)
+    application.run(host='localhost', port=8080, debug=True)
 else:
     """ Return wsgi application. """
-    application = app.get_logging_middleware(bottle.default_app(), config)
+    application = application, config

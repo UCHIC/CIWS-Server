@@ -2,14 +2,6 @@ import os
 import json
 from typing import Dict, Any, TextIO
 
-from requestlogger import WSGILogger, ApacheFormatter
-from logging.handlers import TimedRotatingFileHandler
-
-
-def get_logging_middleware(app, config) -> WSGILogger:
-    log_filename = config['log_filename'] if 'log_filename' in config else '/var/log/milton/logs.log'
-    handlers = [TimedRotatingFileHandler(log_filename, 'd', 7), ]
-    return WSGILogger(app, handlers, ApacheFormatter())
 
 
 def get_app_config() -> Dict[str, Any]:
