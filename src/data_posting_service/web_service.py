@@ -70,6 +70,3 @@ application.install(canister.Canister())
 if __name__ == '__main__':
     """ Run locally on port 8080 if not run through a wsgi. """
     application.run(host='localhost', port=8080, debug=True)
-else:
-    """ Return wsgi application. """
-    application = application, config
