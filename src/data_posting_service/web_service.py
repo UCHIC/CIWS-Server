@@ -64,7 +64,7 @@ except IOError as ioe:
 
 
 application = bottle.default_app()
-application.config.load_config('bottle.conf')
+application.config.load_config(os.path.join(os.getcwd(), 'bottle.conf'))
 application.install(canister.Canister())
 
 if __name__ == '__main__':
