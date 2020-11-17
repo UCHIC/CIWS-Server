@@ -88,7 +88,7 @@ def generate_dataframe(csv_file_path: Path) -> pd.DataFrame:
     """
     Reads a CSV file and creates a Pandas Dataframe.
     """
-    logger.debug('creating dataframe for file {csv_file_path.name}.')
+    logger.debug(f'creating dataframe for file {csv_file_path.name}.')
     data_frame: pd.DataFrame = pd.read_csv(
         csv_file_path,
         index_col=0,
@@ -146,6 +146,7 @@ def insert_influx_dataframe(
         },
     )
     logger.info('data uploaded to influx successfully.')
+
 
 def parse_date(date_string: str):
     """
