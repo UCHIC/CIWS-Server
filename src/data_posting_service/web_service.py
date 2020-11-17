@@ -1,10 +1,9 @@
 import hashlib
 import os
 import sys
-from typing import Dict, List, Any
-
 import bottle
-# import canister
+
+from typing import Dict, List, Any
 
 from data_posting_service import auth, app
 
@@ -62,10 +61,8 @@ try:
 except IOError as ioe:
     sys.exit("Settings file not found!")
 
-
 application = bottle.default_app()
-# application.config.load_config(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bottle.conf'))
-# application.install(canister.Canister())
+
 
 if __name__ == '__main__':
     """ Run locally on port 8080 if not run through a wsgi. """
