@@ -11,9 +11,8 @@ def authorize():
     """ Authorize a file upload given a previously generated token. """
     config: Dict[str, Any] = app.get_app_config()
 
-    try:
-        server_token: str = config['secret_key']
-    except KeyError as ie:
+    server_token: str = config.get('secret_key')
+    if not server_token:
         raise bottle.HTTPError(500, "Internal Server Error")
 
     if 'Authorization' not in bottle.request.headers:
@@ -63,4 +62,5 @@ def hash_filenames(files: List[str], pepper: str, hourly_salt: float) -> str:
 
 
 def get_hourly_salt() -> float:
+    """ Get a timestamp with the current hour """
     return datetime.utcnow().replace(minute=0, second=0, microsecond=0).timestamp()

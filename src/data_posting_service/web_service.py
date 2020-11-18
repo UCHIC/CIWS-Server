@@ -1,4 +1,3 @@
-import hashlib
 import os
 import sys
 import bottle
@@ -12,7 +11,7 @@ def get_file_save_directory() -> str:
     """ Gets the directory where the files will be copied to """
 
     default_directory: str = 'data'
-    return config['file_destination'] if 'file_destination' in config else default_directory
+    return config.get('file_destination', default_directory)
 
 
 # @bottle.get('/data-api')
@@ -65,5 +64,5 @@ application = bottle.default_app()
 
 
 if __name__ == '__main__':
-    """ Run locally on port 8080 if not run through a wsgi. """
+    # Run locally on port 8080 if not run through a wsgi.
     application.run(host='localhost', port=8080, debug=True)
