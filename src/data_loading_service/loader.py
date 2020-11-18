@@ -44,8 +44,8 @@ def process_source_files():
         # get all the metadata from the csv file.
         try:
             site_id, datalogger_id, is_qc = get_file_metadata(csv_file_path)
-        except AttributeError as ae:
-            logger.exception(f'The csv file {csv_file_path.name} is not formatted correctly: {ae}')
+        except (AttributeError, StopIteration) as err:
+            logger.exception(f'The csv file {csv_file_path.name} is not formatted correctly: {err}')
             logger.info(f'error while parsing file {csv_file_path.name}, moving to {failed}')
             move_file(csv_file_path, failed)
             continue
