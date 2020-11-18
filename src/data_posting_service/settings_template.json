@@ -1,0 +1,5 @@
+{
+  "secret_key": "{string: a private key used to generate the upload tokens}",
+  "client_token":  "{string: a public key used to generate upload tokens and authenticate upload requests}",
+  "files_destination": "{string: the path to the directory where the files will be uploaded to}"
+}

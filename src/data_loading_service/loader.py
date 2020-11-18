@@ -19,6 +19,9 @@ measurement_name_map = {
 
 
 def process_source_files():
+    """
+    Main function that reads all the csv files, creates a dataframe with the data, and uploads to influxdb.
+    """
     logger.info("starting loading service.")
 
     # get the source and target directories from the settings file.

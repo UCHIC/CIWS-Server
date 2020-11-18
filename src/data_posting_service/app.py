@@ -4,6 +4,9 @@ from typing import Dict, Any, TextIO
 
 
 def get_app_config() -> Dict[str, Any]:
+    """
+    Reads the settings.json file and loads all the app settings.
+    """
     settings_path: Path = Path(__file__).resolve().parent / 'settings.json'
     data_file: TextIO
 
