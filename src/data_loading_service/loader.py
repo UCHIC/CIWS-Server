@@ -25,7 +25,7 @@ def process_source_files():
     logger.info("starting loading service.")
 
     # get the source and target directories from the settings file.
-    source, target = setup_directories()
+    source, target, failed = setup_directories()
 
     # get list of all csv files.
     csv_files: List[Path] = sorted(source.glob('*.csv'))
@@ -46,6 +46,8 @@ def process_source_files():
             site_id, datalogger_id, is_qc = get_file_metadata(csv_file_path)
         except AttributeError as ae:
             logger.exception(f'The csv file {csv_file_path.name} is not formatted correctly: {ae}')
+            logger.info(f'error while parsing file {csv_file_path.name}, moving to {failed}')
+            move_file(csv_file_path, failed)
             continue
 
         measurement_name = measurement_name_map.get(is_qc)
@@ -56,6 +58,8 @@ def process_source_files():
             csv_dataframe: pd.DataFrame = generate_dataframe(csv_file_path)
         except (IOError, ValueError) as err:
             logger.exception(f'error generating dataframe for file {csv_file_path.name}: {err}')
+            logger.info(f'error while parsing file {csv_file_path.name}, moving to {failed}')
+            move_file(csv_file_path, failed)
             continue
 
         # insert all the data into the influxdb instance.
@@ -70,7 +74,7 @@ def process_source_files():
         logger.info('data uploaded to influx successfully.')
 
         # move the csv file from the source directory to the target directory
-        target_file: Path = move_uploaded_file(csv_file_path, target)
+        target_file: Path = move_file(csv_file_path, target)
         if target_file.exists():
             logger.info(f'file {csv_file_path.name} has been moved to the target directory at {target}.')
         else:
@@ -79,18 +83,20 @@ def process_source_files():
     logger.info('process complete!!')
 
 
-def setup_directories() -> Tuple[Path, Path]:
+def setup_directories() -> Tuple[Path, Path, Path]:
     """
     Get the source and target directory from the settings.json file and create the directories if they don't exist.
     """
 
     source: Path = Path(config.get('source_directory'))
     target: Path = Path(config.get('target_directory'))
+    failed: Path = Path(config.get('failed_directory'))
 
     source.mkdir(parents=True, exist_ok=True)
     target.mkdir(parents=True, exist_ok=True)
+    failed.mkdir(parents=True, exist_ok=True)
     logger.debug(f'source: {source} and target: {target} directories loaded.')
-    return source, target
+    return source, target, failed
 
 
 def create_influx_client() -> DataFrameClient:
@@ -174,9 +180,9 @@ def insert_influx_dataframe(
     return success
 
 
-def move_uploaded_file(csv_file_path: Path, target_directory: Path) -> Path:
+def move_file(csv_file_path: Path, target_directory: Path) -> Path:
     """
-    Move a CSV file to the target directory after it has been uploaded.
+    Move a CSV file a file to a new directory.
     """
     logger.debug(f'moving file {csv_file_path.name} to {target_directory}')
     target_file = Path(target_directory / csv_file_path.name)
