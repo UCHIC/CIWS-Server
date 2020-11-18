@@ -42,7 +42,12 @@ def process_source_files():
 
     for csv_file_path in csv_files:
         # get all the metadata from the csv file.
-        site_id, datalogger_id, is_qc = get_file_metadata(csv_file_path)
+        try:
+            site_id, datalogger_id, is_qc = get_file_metadata(csv_file_path)
+        except AttributeError as ae:
+            logger.exception(f'The csv file {csv_file_path.name} is not formatted correctly: {ae}')
+            continue
+
         measurement_name = measurement_name_map.get(is_qc)
         logger.info(f'working on file {csv_file_path.name} with site id: {site_id} and datalogger id: {datalogger_id}.')
 
