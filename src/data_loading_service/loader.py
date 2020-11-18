@@ -54,8 +54,8 @@ def process_source_files():
         # create the pandas dataframe with the data in the csv file.
         try:
             csv_dataframe: pd.DataFrame = generate_dataframe(csv_file_path)
-        except IOError as ioe:
-            logger.exception(f'error generating dataframe for file {csv_file_path.name}: {ioe}')
+        except (IOError, ValueError) as err:
+            logger.exception(f'error generating dataframe for file {csv_file_path.name}: {err}')
             continue
 
         # insert all the data into the influxdb instance.
