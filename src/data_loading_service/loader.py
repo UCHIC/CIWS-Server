@@ -26,18 +26,22 @@ def process_source_files():
 
     # get list of all csv files.
     csv_files: List[Path] = sorted(source.glob('*.csv'))
+
+    # stop process if there are no files.
+    if len(csv_files) == 0:
+        logger.info('no files found in the source directory.')
+        return
+
     logger.info(f'found {len(csv_files)} files in {source}.')
-    csv_file_path: Path
 
     # create the influxdb connection.
     influx_client: DataFrameClient = create_influx_client()
-    logger.debug('influx connection created.')
 
     for csv_file_path in csv_files:
         # get all the metadata from the csv file.
         site_id, datalogger_id, is_qc = get_file_metadata(csv_file_path)
         measurement_name = measurement_name_map.get(is_qc)
-        logger.info(f'working on file {csv_file_path} with site id: {site_id} and datalogger id: {datalogger_id}.')
+        logger.info(f'working on file {csv_file_path.name} with site id: {site_id} and datalogger id: {datalogger_id}.')
 
         # create the pandas dataframe with the data in the csv file.
         try:
@@ -48,10 +52,21 @@ def process_source_files():
 
         # insert all the data into the influxdb instance.
         try:
-            insert_influx_dataframe(influx_client, csv_dataframe, measurement_name, site_id, datalogger_id)
+            success: bool = insert_influx_dataframe(influx_client, csv_dataframe, measurement_name, site_id, datalogger_id)
         except (ConnectionError, ReadTimeout, InfluxDBClientError, InfluxDBServerError) as e:
             logger.exception(f'error connecting to the influxdb instance: {e}')
             continue
+        if not success:
+            logger.info('data could not be uploaded to influx.')
+            continue
+        logger.info('data uploaded to influx successfully.')
+
+        # move the csv file from the source directory to the target directory
+        target_file: Path = move_uploaded_file(csv_file_path, target)
+        if target_file.exists():
+            logger.info(f'file {csv_file_path.name} has been moved to the target directory at {target}.')
+        else:
+            logger.info(f'file {csv_file_path.name} could not be moved to the target directory.')
 
     logger.info('process complete!!')
 
@@ -66,6 +81,7 @@ def setup_directories() -> Tuple[Path, Path]:
 
     source.mkdir(parents=True, exist_ok=True)
     target.mkdir(parents=True, exist_ok=True)
+    logger.debug(f'source: {source} and target: {target} directories loaded.')
     return source, target
 
 
@@ -79,7 +95,8 @@ def create_influx_client() -> DataFrameClient:
     dbname = database.get('name')
     port = database.get('port')
     host = database.get('host')
-    logger.info(f'creating influx connection as {user} to {dbname} in {host}.')
+    logger.debug(f'connection info: {database}')
+    logger.info(f'creating influx connection as {user} to {dbname} at {host}.')
 
     return DataFrameClient(host, port, user, password, dbname)
 
@@ -129,12 +146,12 @@ def get_file_metadata(csv_file_path: Path) -> Tuple[str, str, Union[str, None]]:
 
 def insert_influx_dataframe(
         client: DataFrameClient, dataframe: pd.DataFrame,
-        measurement_name: str, site_id: str, datalogger_id: str) -> None:
+        measurement_name: str, site_id: str, datalogger_id: str) -> bool:
     """
     Insert all csv data as a dataframe into influxdb client.
     """
     logger.debug('inserting rows into influxdb.')
-    client.write_points(
+    success: bool = client.write_points(
         dataframe=dataframe,
         measurement=measurement_name,
         field_columns={
@@ -145,7 +162,18 @@ def insert_influx_dataframe(
             'dataloggerID': datalogger_id
         },
     )
-    logger.info('data uploaded to influx successfully.')
+
+    return success
+
+
+def move_uploaded_file(csv_file_path: Path, target_directory: Path) -> Path:
+    """
+    Move a CSV file to the target directory after it has been uploaded.
+    """
+    logger.debug(f'moving file {csv_file_path.name} to {target_directory}')
+    target_file = Path(target_directory / csv_file_path.name)
+    csv_file_path.rename(target_file)
+    return target_file
 
 
 def parse_date(date_string: str):
