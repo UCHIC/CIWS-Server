@@ -229,12 +229,12 @@ def create_logger() -> logging.Logger:
 
 
 if __name__ == "__main__":
-    settings_path = Path(__file__).resolve().parent
+    settings_path = Path(__file__).resolve().parent / 'settings.json'
     config: Dict[str, Any] = {}
     data_file: TextIO
 
     try:
-        with open(settings_path / 'settings.json', 'r') as data_file:
+        with settings_path.open() as data_file:
             config = json.load(data_file)
     except OSError:
         sys.exit("Unable to read settings.json.")
