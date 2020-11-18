@@ -211,7 +211,7 @@ def create_logger() -> logging.Logger:
     ch.setLevel(logging.DEBUG)
 
     # Get logger path and create directories if it doesn't exist
-    file_path: Path = Path(config.get('logger_path', r'logs\loader.log'))
+    file_path: Path = Path(config.get('logger_file', r'logs\loader.log'))
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     # create file handler with an error level

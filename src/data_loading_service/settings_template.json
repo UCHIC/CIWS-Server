@@ -1,0 +1,12 @@
+{
+    "logger_file": "{string: file to be used for logging}",
+    "source_directory": "{string: directory with the csv files to upload to influxdb}",
+    "target_directory":  "{string: directory where the csv files will be moved to after uploading}",
+    "database": {
+        "name": "{string: name of the influxdb database to connect to}",
+        "user": "{string: username to be used to connect to influxdb}",
+        "password": "{string: password for the user}",
+        "host": "{string: host to connect to}",
+        "port": "{string: influxdb port number}"
+    }
+}
