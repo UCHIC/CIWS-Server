@@ -25,7 +25,7 @@ def process_source_files():
     logger.info("starting loading service.")
 
     # get the source and target directories from the settings file.
-    source, target, failed = setup_directories()
+    source, target, quarantine = setup_directories()
 
     # get list of all csv files.
     csv_files: List[Path] = sorted(source.glob('*.csv'))
@@ -46,8 +46,8 @@ def process_source_files():
             site_id, datalogger_id, is_qc = get_file_metadata(csv_file_path)
         except (AttributeError, StopIteration) as err:
             logger.exception(f'The csv file {csv_file_path.name} is not formatted correctly: {err}')
-            logger.info(f'error while parsing file {csv_file_path.name}, moving to {failed}')
-            move_file(csv_file_path, failed)
+            logger.info(f'error while parsing file {csv_file_path.name}, moving to {quarantine}')
+            move_file(csv_file_path, quarantine)
             continue
 
         measurement_name = measurement_name_map.get(is_qc)
@@ -58,8 +58,8 @@ def process_source_files():
             csv_dataframe: pd.DataFrame = generate_dataframe(csv_file_path)
         except (IOError, ValueError) as err:
             logger.exception(f'error generating dataframe for file {csv_file_path.name}: {err}')
-            logger.info(f'error while parsing file {csv_file_path.name}, moving to {failed}')
-            move_file(csv_file_path, failed)
+            logger.info(f'error while parsing file {csv_file_path.name}, moving to {quarantine}')
+            move_file(csv_file_path, quarantine)
             continue
 
         # insert all the data into the influxdb instance.
@@ -90,13 +90,13 @@ def setup_directories() -> Tuple[Path, Path, Path]:
 
     source: Path = Path(config.get('source_directory'))
     target: Path = Path(config.get('target_directory'))
-    failed: Path = Path(config.get('failed_directory'))
+    quarantine: Path = Path(config.get('quarantine_directory'))
 
     source.mkdir(parents=True, exist_ok=True)
     target.mkdir(parents=True, exist_ok=True)
-    failed.mkdir(parents=True, exist_ok=True)
-    logger.debug(f'source: {source} and target: {target} directories loaded.')
-    return source, target, failed
+    quarantine.mkdir(parents=True, exist_ok=True)
+    logger.debug(f'source: {source}, target: {target}, and quarantine: {quarantine} directories loaded.')
+    return source, target, quarantine
 
 
 def create_influx_client() -> DataFrameClient:

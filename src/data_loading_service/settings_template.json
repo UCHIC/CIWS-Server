@@ -2,7 +2,7 @@
     "logger_file": "{string: file to be used for logging}",
     "source_directory": "{string: directory with the csv files to upload to influxdb}",
     "target_directory":  "{string: directory where the csv files will be moved to after uploading}",
-    "failed_directory": "{string: directory where the csv files will be moved to if there's an error}",
+    "quarantine_directory": "{string: directory where the csv files will be moved to if there's an error}",
     "database": {
         "name": "{string: name of the influxdb database to connect to}",
         "user": "{string: username to be used to connect to influxdb}",
