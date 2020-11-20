@@ -4,14 +4,15 @@ import bottle
 
 from typing import Dict, List, Any
 
-from data_posting_service import auth, app
+from common import get_app_config
+from data_posting_service import auth
 
 
 def get_file_save_directory() -> str:
     """ Gets the directory where the files will be copied to """
 
     default_directory: str = 'data'
-    return config.get('file_destination', default_directory)
+    return config.get('source_directory', default_directory)
 
 
 # @bottle.get('/data-api')
@@ -56,7 +57,7 @@ def data_api_upload() -> Dict[str, str]:
 
 
 try:
-    config: Dict[str, Any] = app.get_app_config()
+    config: Dict[str, Any] = get_app_config()
 except IOError as ioe:
     sys.exit("Settings file not found!")
 

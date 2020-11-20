@@ -4,12 +4,12 @@ from datetime import datetime
 from typing import Dict, Any, List
 
 import bottle
-from data_posting_service import app
+import common
 
 
 def authorize():
     """ Authorize a file upload given a previously generated token. """
-    config: Dict[str, Any] = app.get_app_config()
+    config: Dict[str, Any] = common.get_app_config()
 
     server_token: str = config.get('secret_key')
     if not server_token:
@@ -35,7 +35,7 @@ def authorize():
 
 def generate_token():
     """ Generate an upload specific token. """
-    config: Dict[str, Any] = app.get_app_config()
+    config: Dict[str, Any] = common.get_app_config()
 
     try:
         client_token: str = config['client_token']

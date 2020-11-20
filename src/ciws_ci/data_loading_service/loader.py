@@ -6,11 +6,12 @@ import logging
 import pandas as pd
 
 from pathlib import Path
-from logging.handlers import TimedRotatingFileHandler
 from typing import Dict, Any, TextIO, List, Tuple, Union
 from influxdb import DataFrameClient
 from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
 from requests.exceptions import ConnectionError, ReadTimeout
+
+from common import create_logger
 
 measurement_name_map = {
     None: 'RawData',
@@ -212,38 +213,8 @@ def parse_date(date_string: str):
 #         )
 
 
-def create_logger() -> logging.Logger:
-    """
-    Create a logger with both a console and a time rotating file handler.
-    """
-
-    log: logging.Logger = logging.getLogger('loading_service')
-    log.setLevel(logging.DEBUG)
-
-    # create console handler with a debug level
-    ch: logging.StreamHandler = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-
-    # Get logger path and create directories if it doesn't exist
-    file_path: Path = Path(config.get('logger_file', r'logs\loader.log'))
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # create file handler with an error level
-    fh: TimedRotatingFileHandler = TimedRotatingFileHandler(file_path, when='D')
-    fh.setLevel(logging.INFO)
-
-    # create formatter and add it to the handlers
-    formatter: logging.Formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    # add the handlers to the logger
-    log.addHandler(fh)
-    log.addHandler(ch)
-    return log
-
-
 if __name__ == "__main__":
-    settings_path = Path(__file__).resolve().parent / 'settings.json'
+    settings_path = Path(__file__).resolve().parent.parent / 'settings.json'
     config: Dict[str, Any] = {}
     data_file: TextIO
 
@@ -253,5 +224,5 @@ if __name__ == "__main__":
     except OSError:
         sys.exit("Unable to read settings.json.")
 
-    logger: logging.Logger = create_logger()
+    logger: logging.Logger = create_logger('data_loader', config.get('log_directory'))
     process_source_files()
