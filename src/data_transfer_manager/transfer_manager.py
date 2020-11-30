@@ -241,7 +241,7 @@ if __name__ == "__main__":
         send_error("testing post request from MILTON script.")
     else:
         # Import settings.json file
-        hosts = []
+
         config = {}
         try:
             with open("settings.json", 'r') as data_file:
@@ -250,8 +250,7 @@ if __name__ == "__main__":
             print("No list of hostnames found.")
             exit(1)
 
-        for host in config['hosts']:
-            hosts.append(host['hostname'])
+        hosts = config['hosts']
 
         # Instantiate a thread pool with 5 worker threads
         pool = ThreadPool(6)
