@@ -1,4 +1,8 @@
 import json
+import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
+
 import paramiko
 import os
 import sys
@@ -150,6 +154,7 @@ def write_to_db(item, building, target):
                     batch_size=2000
                 )
             end = timer()
+            log.info(f'completed writing file {item.filename} to database in {end - start} seconds.')
             print("Completed writing to database for: " + item.filename, "Time Elapsed: ", (end - start))
         except:
             send_error(
@@ -159,7 +164,8 @@ def write_to_db(item, building, target):
 
 # Function to be executed in a thread
 def connect(host):
-    print("Starting connection")
+    log.info(f'Starting connection to {host}')
+
     source = '/home/pi/CampusMeter/'
     building = host[host.find('llc-') + 4]
     target = config["target"] + building
@@ -171,6 +177,7 @@ def connect(host):
             password=config['sshinfo']['password']
         )
     except:
+        log.error(f'Unable to connect to {host}')
         send_error("Unable to connect to {}".format(host))
 
     sftp = paramiko.SFTPClient.from_transport(transport)
@@ -189,15 +196,19 @@ def connect(host):
                         os.path.join(target, item.filename)).st_size != item.st_size:
                     start = timer()
                     print("Updating Data: ", item.filename)
+                    log.info(f'getting file {item.filename} from {host}')
                     sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
                     end = timer()
+                    log.info(f'file {item.filename} downloaded from {host} in {end - start} seconds.')
                     print(item.filename + " updated successfully, time elapsed: ", (end - start))
                     write_to_db(item, building, target)
                 elif not os.path.isfile(os.path.join(target, item.filename)):
                     start = timer()
                     print("Copying Data: ", item.filename)
+                    log.info(f'getting file {item.filename} from {host}')
                     sftp.get('%s%s' % (source, item.filename), '%s/%s' % (target, item.filename))
                     end = timer()
+                    log.info(f'file {item.filename} downloaded from {host} in {end - start} seconds.')
                     print(item.filename + " copied successfully, time elapsed: ", (end - start))
                     write_to_db(item, building, target)
             else:
@@ -208,6 +219,7 @@ def connect(host):
 
     sftp.close()
     transport.close()
+    log.info('Finished downloading all files! closing connection.')
     print("Closing Connection")
 
 
@@ -225,6 +237,34 @@ def send_error(data):
             'Request to slack returned an error %s, the response is:\n%s'
             % (response.status_code, response.text)
         )
+
+
+def get_logger():
+    # Create a logger
+    log: logging.Logger = logging.getLogger('transfer_manager')
+    log.setLevel(logging.DEBUG)
+
+    # create console handler with a debug level
+    ch: logging.StreamHandler = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+
+    # Get logger path and create directories if it doesn't exist
+    file_path: Path = Path(config.get('log_directory', 'logs')) / 'transfer_manager.log'
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # create file handler with an error level
+    fh: RotatingFileHandler = RotatingFileHandler(file_path, maxBytes=5 * 1024 * 1024, backupCount=5)
+    fh.setLevel(logging.INFO)
+
+    # create formatter and add it to the handlers
+    formatter: logging.Formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+
+    # add the handlers to the logger
+    log.addHandler(fh)
+    log.addHandler(ch)
+    return log
 
 
 if __name__ == "__main__":
@@ -250,7 +290,9 @@ if __name__ == "__main__":
             print("No list of hostnames found.")
             exit(1)
 
+        log = get_logger()
         hosts = config['hosts']
+        log.info(f'{len(hosts)} hosts detected: {", ".join(hosts)} ')
 
         # Instantiate a thread pool with 5 worker threads
         pool = ThreadPool(6)
