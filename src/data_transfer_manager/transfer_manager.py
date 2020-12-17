@@ -273,7 +273,7 @@ if __name__ == "__main__":
     if 'slacktest' in os.environ:
         config = {}
         try:
-            with open("settings.json", 'r') as data_file:
+            with open(settings_path, 'r') as data_file:
                 config = json.load(data_file)
         except OSError:
             print("No list of hostnames found.")
@@ -284,7 +284,7 @@ if __name__ == "__main__":
 
         config = {}
         try:
-            with open("settings.json", 'r') as data_file:
+            with open(settings_path, 'r') as data_file:
                 config = json.load(data_file)
         except OSError:
             print("No list of hostnames found.")
