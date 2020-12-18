@@ -188,8 +188,10 @@ def connect(host):
     channel = transport.open_channel(kind="session")
 
     current_time = datetime.now()
-    for item in sftp.listdir_attr(
-            source):  # Iterate on files on datalogger, check datetime values to exclude one being currently written.
+    log.info(f'downloading these files from {host}: {sftp.listdir_attr(source)}')
+
+    for item in sftp.listdir_attr(source):  # Iterate on files on datalogger, check datetime values to exclude one being currently written.
+        log.info(f'-- working with file {item.filename} in {host}')
         if not datetime.fromtimestamp(sftp.stat(source + item.filename).st_mtime) > current_time:
             if not S_ISDIR(item.st_mode):
                 if os.path.isfile(os.path.join(target, item.filename)) and os.stat(
@@ -214,6 +216,9 @@ def connect(host):
             else:
                 os.mkdir('%s%s' % (target, item.filename), ignore_existing=True)
                 sftp.get_dir('%s%s' % (source, item.filename), '%s%s' % (target, item.filename))
+        else:
+            log.warning(f'file modified time: {datetime.fromtimestamp(sftp.stat(source + item.filename).st_mtime)} '
+                        f'is greater than the current time {current_time}')
 
     # if we don't want the whole directory,  find latest file with ls -1t | head -1 instead
 
