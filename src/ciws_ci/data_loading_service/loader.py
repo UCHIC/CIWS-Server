@@ -5,7 +5,7 @@ import json
 import logging
 import pandas as pd
 
-from pathlib import Path
+from pathlib import Path, PosixPath
 from typing import Dict, Any, TextIO, List, Tuple, Union
 from influxdb import DataFrameClient
 from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
@@ -30,6 +30,8 @@ def process_source_files():
 
     # get list of all csv files.
     csv_files: List[Path] = sorted(source.glob('*.csv'))
+    if type(Path('.')) == PosixPath:
+        csv_files += sorted(source.glob('*.CSV'))
 
     # stop process if there are no files.
     if len(csv_files) == 0:
