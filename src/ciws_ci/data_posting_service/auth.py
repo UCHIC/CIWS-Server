@@ -15,6 +15,12 @@ logger: logging.Logger = logging.getLogger('data_poster')
 def authorize():
     """ Authorize a file upload given a previously generated token. """
     server_token: str = config.get('secret_key')
+
+    # ignore authorization if testing is enabled.
+    if config.get('testing') is True:
+        logger.info('authorization bypassed in test mode.')
+        return
+
     if not server_token:
         logger.error('missing configuration from settings.json file.')
         raise bottle.HTTPError(500, "Internal Server Error")
