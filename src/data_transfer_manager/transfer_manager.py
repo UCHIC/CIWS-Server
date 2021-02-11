@@ -18,6 +18,8 @@ import requests
 from queue import Queue
 from threading import Thread
 
+DEFAULT_THREADS = 2
+
 
 class Worker(Thread):
     """ Thread executing tasks from a given tasks queue """
@@ -299,8 +301,8 @@ if __name__ == "__main__":
         hosts = config['hosts']
         log.info(f'{len(hosts)} hosts detected: {", ".join(hosts)} ')
 
-        # Instantiate a thread pool with 5 worker threads
-        pool = ThreadPool(6)
+        # Instantiate a thread pool with worker threads
+        pool = ThreadPool(config.get('connections', DEFAULT_THREADS))
 
         # Add the jobs in bulk to the thread pool. Alternatively you could use
         # `pool.add_task` to add single jobs. The code will block here, which
