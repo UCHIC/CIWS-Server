@@ -1,0 +1,18 @@
+{
+    "connections":  "{int: the number of threads used to connect to the hosts concurrently}",
+    "log_directory": "{string: path where the log files are stored (must have write permissions)}",
+    "hosts":"{list: a list of domain names or ip addresses to connect to}",
+    "database": {
+            "name": "{string: name of the database to connect to}",
+            "user": "{string: database username}",
+            "password": "{string: database password for the given user}",
+            "host": "{string: database server hostname or ip address}",
+            "port": "{string: database port to connect to}",
+            "measurement": "{string: name of the InfluxDB measurement to store the data}"
+    },
+    "sshinfo":{
+            "username": "{string: username used to connect to hosts}",
+            "password": "{string: password used to connect to hosts}"
+    },
+    "slack_webhook": "{string: slack webhook to send error messages to admins through slack}"
+}

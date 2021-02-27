@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Data Transfer Manager Api</title>
+</head>
+<body>
+    <h2>Data Transfer Manager Api</h2>
+    <h3>You can use this form below to submit a file.</h3>
+    <form action="/data-api" method="post" enctype="multipart/form-data">
+        <label>Choose your data file(s): </label><input type="file" multiple name="data_file[]" />
+        <br><br>
+        <input type="submit" value="Upload">
+    </form>
+</body>
+</html>

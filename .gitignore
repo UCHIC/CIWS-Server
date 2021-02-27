@@ -1,4 +1,7 @@
 .DS_Store
 *.pyc
-serverconfig.json
-screenlog.0
+.idea/
+venv/
+/src/ciws_ci/settings.json
+/src/data_transfer_manager/settings.json
+/src/data_posting_service/data/

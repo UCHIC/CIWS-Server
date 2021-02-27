@@ -1,0 +1,15 @@
+{
+    "log_directory": "{string: file to be used for logging}",
+    "source_directory": "{string: directory with the csv files to upload to influxdb, and where the web service files will be uploaded to.}",
+    "target_directory":  "{string: directory where the csv files will be moved to after uploading}",
+    "quarantine_directory": "{string: directory where the csv files will be moved to if there's an error}",
+    "client_token":  "{string: a public key used to generate upload tokens and authenticate upload requests}",
+    "secret_key": "{string: a private key used to generate the upload tokens}",
+    "database": {
+        "name": "{string: name of the influxdb database to connect to}",
+        "user": "{string: username to be used to connect to influxdb}",
+        "password": "{string: password for the user}",
+        "host": "{string: host to connect to}",
+        "port": "{string: influxdb port number}"
+    }
+}
