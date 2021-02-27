@@ -246,8 +246,8 @@ $ source ~/.bashrc
 
 Now we can run the data loading service script by first activating the ciws virtual environment, then calling the script.
 ```
-$ source ~/ciws/ciws_environment/bin/activate
-$ python ~/ciws/CIWS-Server/src/ciws_ci/data_loading_service/loader.py
+$ source /home/<user>/ciws/ciws_environment/bin/activate
+$ python /home/<user>/ciws/CIWS-Server/src/ciws_ci/data_loading_service/loader.py
 ```
 
 ### Setting up a cronjob for the data loader
